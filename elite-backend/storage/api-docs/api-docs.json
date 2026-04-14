@@ -1,0 +1,1434 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Hijra Global API",
+        "description": "Backend API for HIJRA Foreign Employment Agency recruitment platform",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:8000",
+            "description": "API Server"
+        }
+    ],
+    "paths": {
+        "/api/register": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Register a seeker account with profile",
+                "operationId": "e566b4a18df9c56b93b50729c9e9a199",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation",
+                                    "phone",
+                                    "profile"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Abel Tadesse"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "abel@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+251911223344"
+                                    },
+                                    "preferred_language": {
+                                        "type": "string",
+                                        "example": "en"
+                                    },
+                                    "profile": {
+                                        "properties": {
+                                            "full_name": {
+                                                "type": "string",
+                                                "example": "Abel Tadesse"
+                                            },
+                                            "gender": {
+                                                "type": "string",
+                                                "example": "male"
+                                            },
+                                            "date_of_birth": {
+                                                "type": "string",
+                                                "format": "date",
+                                                "example": "1998-08-16"
+                                            },
+                                            "education_level": {
+                                                "type": "string",
+                                                "example": "Bachelor"
+                                            },
+                                            "experience_summary": {
+                                                "type": "string",
+                                                "example": "3 years in housekeeping roles"
+                                            },
+                                            "skills": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string",
+                                                    "example": "Housekeeping"
+                                                }
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Registration successful"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/partner/register": {
+            "post": {
+                "tags": [
+                    "Partner"
+                ],
+                "summary": "Register foreign agency partner (pending super admin approval)",
+                "operationId": "0969f7d6125577387dc4d679e56fe5a5",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation",
+                                    "phone",
+                                    "company_name",
+                                    "license_file"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+251911223344"
+                                    },
+                                    "company_name": {
+                                        "type": "string",
+                                        "example": "Dubai Partner LLC"
+                                    },
+                                    "company_email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "company_phone": {
+                                        "type": "string"
+                                    },
+                                    "country": {
+                                        "type": "string",
+                                        "example": "UAE"
+                                    },
+                                    "license_file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Partner registration submitted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Partner registration received and pending super admin approval."
+                                        },
+                                        "agency": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Validation failed"
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login and receive Sanctum token",
+                "operationId": "5fe6f18382a1f913d10a75bfea853399",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "abel@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful"
+                    },
+                    "422": {
+                        "description": "Invalid credentials"
+                    }
+                }
+            }
+        },
+        "/api/logout": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Logout current token",
+                "operationId": "51dc852c8fc38fd9b469507f27c396a1",
+                "responses": {
+                    "200": {
+                        "description": "Logout successful"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/jobs": {
+            "get": {
+                "tags": [
+                    "Jobs"
+                ],
+                "summary": "List published jobs with filters",
+                "operationId": "891885e30a6ca0abacdc66604f5e3bb7",
+                "parameters": [
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "country",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "published",
+                                "closed"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job list"
+                    }
+                }
+            }
+        },
+        "/api/jobs/{job}": {
+            "get": {
+                "tags": [
+                    "Jobs"
+                ],
+                "summary": "Get single published job",
+                "operationId": "e85e8a5f0d858e8ce59939c7c5af0033",
+                "parameters": [
+                    {
+                        "name": "job",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job details"
+                    },
+                    "404": {
+                        "description": "Job not found"
+                    }
+                }
+            }
+        },
+        "/api/contact": {
+            "post": {
+                "tags": [
+                    "Contact"
+                ],
+                "summary": "Submit contact message",
+                "operationId": "51e6464689ab7d5a544e7e346f8ce5bb",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "subject",
+                                    "message"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Abebe"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "abebe@example.com"
+                                    },
+                                    "subject": {
+                                        "type": "string",
+                                        "example": "Need recruitment support"
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Please contact us about staffing"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Message sent"
+                    }
+                }
+            }
+        },
+        "/api/profile": {
+            "get": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Get own profile, documents, and applications",
+                "operationId": "0441131f594d729d65cc9ced67bf7246",
+                "responses": {
+                    "200": {
+                        "description": "Profile response"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update own user/profile info",
+                "operationId": "01a3cef56a26977a892030a7bf1650ee",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Abel Tadesse"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+251911223344"
+                                    },
+                                    "preferred_language": {
+                                        "type": "string",
+                                        "example": "en"
+                                    },
+                                    "profile": {
+                                        "properties": {
+                                            "full_name": {
+                                                "type": "string",
+                                                "example": "Abel Tadesse"
+                                            },
+                                            "education_level": {
+                                                "type": "string",
+                                                "example": "Bachelor"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/documents/upload": {
+            "post": {
+                "tags": [
+                    "Documents"
+                ],
+                "summary": "Upload private document (PDF/JPG/PNG up to 5MB)",
+                "operationId": "dec4d4f4f28f8eaaa73aebfe72c6fbc4",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "document_type",
+                                    "file"
+                                ],
+                                "properties": {
+                                    "document_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Passport",
+                                            "ID",
+                                            "Certificate"
+                                        ]
+                                    },
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Document uploaded"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/documents": {
+            "get": {
+                "tags": [
+                    "Admin",
+                    "Documents"
+                ],
+                "summary": "List seeker documents for verification",
+                "operationId": "720f177bfd7eaf2431405e9f1daa0f4a",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "verified",
+                                "rejected"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "document_type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Passport",
+                                "ID",
+                                "Certificate"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Document list"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/documents/{document}/status": {
+            "patch": {
+                "tags": [
+                    "Admin",
+                    "Documents"
+                ],
+                "summary": "Verify or reject seeker document",
+                "operationId": "fdb480caae274a9e6cbe89fb58c74129",
+                "parameters": [
+                    {
+                        "name": "document",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pending",
+                                            "verified",
+                                            "rejected"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Document status updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/jobs/{job}/apply": {
+            "post": {
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Apply for a published job",
+                "operationId": "ec26b4f1a3f9d95b44a4812a4dc22e22",
+                "parameters": [
+                    {
+                        "name": "job",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Application created"
+                    },
+                    "200": {
+                        "description": "Already applied"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/my-applications": {
+            "get": {
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "List authenticated seeker applications",
+                "operationId": "a808eae5317c9d6278fcfa2bee8bfd52",
+                "responses": {
+                    "200": {
+                        "description": "Applications list"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/stats": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Admin dashboard stats",
+                "operationId": "4e32726e401d13fa2579c3f02c41139e",
+                "responses": {
+                    "200": {
+                        "description": "Stats response"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/roles": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get available roles and admin types",
+                "operationId": "a2f3b5b9f3cf292c9aad4cf72cc14b74",
+                "responses": {
+                    "200": {
+                        "description": "Roles metadata"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "List users (paginated). Supports role filters",
+                "operationId": "0e76bae529e11cd111c896ccfe0e93b3",
+                "parameters": [
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated users list"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/jobs": {
+            "post": {
+                "tags": [
+                    "Admin",
+                    "Jobs"
+                ],
+                "summary": "Create job listing (admin)",
+                "operationId": "278f610659cf6e113c3890e545dc83da",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "description",
+                                    "category",
+                                    "country"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "object",
+                                        "example": {
+                                            "en": "Driver",
+                                            "ar": "سائق",
+                                            "am": "ሹፌር"
+                                        }
+                                    },
+                                    "description": {
+                                        "type": "object",
+                                        "example": {
+                                            "en": "Experienced driver needed"
+                                        }
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "example": "Driver"
+                                    },
+                                    "country": {
+                                        "type": "string",
+                                        "example": "Saudi Arabia"
+                                    },
+                                    "salary_range": {
+                                        "type": "string",
+                                        "example": "$500-$700"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "published",
+                                            "closed"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Job created"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/partner/jobs": {
+            "post": {
+                "tags": [
+                    "Partner",
+                    "Jobs"
+                ],
+                "summary": "Partner creates job order (pending publication)",
+                "operationId": "2fc359b125cc578c85c92f615151b38d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "description",
+                                    "category",
+                                    "country",
+                                    "vacancies_total"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "object",
+                                        "example": {
+                                            "en": "Driver"
+                                        }
+                                    },
+                                    "description": {
+                                        "type": "object",
+                                        "example": {
+                                            "en": "Need 20 drivers"
+                                        }
+                                    },
+                                    "category": {
+                                        "type": "string"
+                                    },
+                                    "country": {
+                                        "type": "string"
+                                    },
+                                    "salary_range": {
+                                        "type": "string"
+                                    },
+                                    "is_high_level": {
+                                        "type": "boolean"
+                                    },
+                                    "vacancies_total": {
+                                        "type": "integer",
+                                        "example": 20
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Job order submitted"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/jobs/{job}": {
+            "patch": {
+                "tags": [
+                    "Admin",
+                    "Jobs"
+                ],
+                "summary": "Update/close job (admin)",
+                "operationId": "f71ed71b2e21c19436bec0b03f38c3ac",
+                "parameters": [
+                    {
+                        "name": "job",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "published",
+                                            "closed"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Job updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/jobs/{job}/publish": {
+            "patch": {
+                "tags": [
+                    "Admin",
+                    "Jobs"
+                ],
+                "summary": "Publish pending job",
+                "operationId": "8c045a2062ac005db7d4995b4e028aab",
+                "parameters": [
+                    {
+                        "name": "job",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job published"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/jobs/{job}/close": {
+            "patch": {
+                "tags": [
+                    "Admin",
+                    "Jobs"
+                ],
+                "summary": "Close job listing",
+                "operationId": "78b9b75c06cb844eb2dcc82d9edcd232",
+                "parameters": [
+                    {
+                        "name": "job",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job closed"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/applications": {
+            "get": {
+                "tags": [
+                    "Admin",
+                    "Applications"
+                ],
+                "summary": "List applications with filters (admin)",
+                "operationId": "8a77c85370ddcde9accc55ee43a246fa",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "applied",
+                                "shortlisted",
+                                "rejected"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "job_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "applicant_name",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Applications list"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/applications/{application}/status": {
+            "patch": {
+                "tags": [
+                    "Admin",
+                    "Applications"
+                ],
+                "summary": "Update application status (admin)",
+                "operationId": "b1dd697fb2e0ab5ed90492e13e9f4749",
+                "parameters": [
+                    {
+                        "name": "application",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "applied",
+                                            "shortlisted",
+                                            "rejected"
+                                        ]
+                                    },
+                                    "remarks": {
+                                        "type": "string",
+                                        "example": "Strong profile"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/partner/applications/shortlisted": {
+            "get": {
+                "tags": [
+                    "Partner",
+                    "Applications"
+                ],
+                "summary": "Partner view shortlisted/interview/selected candidates",
+                "operationId": "193866f604fbed78a84170dcc8bd04ee",
+                "responses": {
+                    "200": {
+                        "description": "Candidate list"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/partner/applications/{application}/action": {
+            "patch": {
+                "tags": [
+                    "Partner",
+                    "Applications"
+                ],
+                "summary": "Partner requests interview or selects candidate",
+                "operationId": "825065187164591c581d85ad315c2ec4",
+                "parameters": [
+                    {
+                        "name": "application",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "action"
+                                ],
+                                "properties": {
+                                    "action": {
+                                        "type": "string",
+                                        "enum": [
+                                            "request_interview",
+                                            "select_candidate"
+                                        ]
+                                    },
+                                    "remarks": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Partner action recorded"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/documents/{document}/download": {
+            "get": {
+                "tags": [
+                    "Admin",
+                    "Documents"
+                ],
+                "summary": "Download seeker document (admin only)",
+                "operationId": "14e24a3ef91c6a10cfff2f053d2bc71e",
+                "parameters": [
+                    {
+                        "name": "document",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File stream"
+                    },
+                    "404": {
+                        "description": "File not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/super-admin/foreign-agencies/pending": {
+            "get": {
+                "tags": [
+                    "Super Admin"
+                ],
+                "summary": "List pending foreign agency approvals",
+                "operationId": "a4ab4f990e4dcb190a1985be54f67189",
+                "responses": {
+                    "200": {
+                        "description": "Pending agencies"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/super-admin/foreign-agencies/{foreignAgency}/review": {
+            "patch": {
+                "tags": [
+                    "Super Admin"
+                ],
+                "summary": "Approve or reject foreign agency",
+                "operationId": "771f54fb3625e20b67bdfa98b55a532b",
+                "parameters": [
+                    {
+                        "name": "foreignAgency",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "action"
+                                ],
+                                "properties": {
+                                    "action": {
+                                        "type": "string",
+                                        "enum": [
+                                            "approve",
+                                            "reject"
+                                        ]
+                                    },
+                                    "review_notes": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Agency reviewed"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/super-admin/foreign-agencies/{foreignAgency}/license": {
+            "get": {
+                "tags": [
+                    "Super Admin"
+                ],
+                "summary": "Download foreign agency license",
+                "operationId": "2e4c0f5bf9cfd3c23aa11b8c9612a2c5",
+                "parameters": [
+                    {
+                        "name": "foreignAgency",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "License file stream"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/super-admin/staff": {
+            "post": {
+                "tags": [
+                    "Super Admin"
+                ],
+                "summary": "Create staff account (super admin only)",
+                "operationId": "1fb00249356864bb8ae4443b7ebe1fdc",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "phone",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Staff User"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "staff2@hijra.local"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+251955555555"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Password@123"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Password@123"
+                                    },
+                                    "preferred_language": {
+                                        "type": "string",
+                                        "enum": [
+                                            "en",
+                                            "am",
+                                            "ar",
+                                            "or"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Staff account created"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Use Sanctum bearer token: Bearer {token}",
+                "bearerFormat": "Token",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Auth",
+            "description": "Authentication endpoints"
+        },
+        {
+            "name": "Jobs",
+            "description": "Public and admin job endpoints"
+        },
+        {
+            "name": "Profile",
+            "description": "Seeker profile endpoints"
+        },
+        {
+            "name": "Documents",
+            "description": "Document upload and secure access"
+        },
+        {
+            "name": "Applications",
+            "description": "Job application endpoints"
+        },
+        {
+            "name": "Admin",
+            "description": "Admin-only endpoints"
+        },
+        {
+            "name": "Contact",
+            "description": "Public contact form endpoint"
+        },
+        {
+            "name": "Partner",
+            "description": "Foreign partner agency endpoints"
+        },
+        {
+            "name": "Super Admin",
+            "description": "Super admin approval endpoints"
+        }
+    ]
+}

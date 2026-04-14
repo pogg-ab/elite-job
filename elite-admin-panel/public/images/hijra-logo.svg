@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect width="256" height="256" rx="24" fill="#072033" />
+  <g transform="translate(40,40)">
+    <text x="0" y="140" font-family="Arial, Helvetica, sans-serif" font-size="140" font-weight="700" fill="#D4AF37">H</text>
+  </g>
+</svg>
