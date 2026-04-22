@@ -1,5 +1,5 @@
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://api.ethioElite.com' : 'http://127.0.0.1:8000')
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://api.eliteemplyment.com' : 'http://127.0.0.1:8000')
 
 export const ADMIN_AUTH_STORAGE_KEY = 'Elite_admin_auth'
 const GET_CACHE_PREFIX = 'Elite_admin_get_cache_v1:'
@@ -287,7 +287,7 @@ AdminApi.deleteHomepageTestimonial = (id: string | number) =>
 // Employer requests (admin)
 AdminApi.employerRequests = (query = '') => cachedGet(`/api/admin/employer-requests${query}`, 20 * 1000, true)
 AdminApi.getEmployerRequest = (id: string | number) => cachedGet(`/api/admin/employer-requests/${id}`, 20 * 1000, true)
-  AdminApi.deleteEmployerRequest = (id: string | number) => apiRequest(`/api/admin/employer-requests/${id}`, { method: 'DELETE' }, true)
+AdminApi.deleteEmployerRequest = (id: string | number) => apiRequest(`/api/admin/employer-requests/${id}`, { method: 'DELETE' }, true)
 AdminApi.updateEmployerRequestStatus = (id: string | number, payload: any) => apiRequest(`/api/admin/employer-requests/${id}/status`, { method: 'PATCH', body: JSON.stringify(payload) }, true)
 
 AdminApi.aboutPageSections = () => cachedGet('/api/admin/about-page/sections', 30 * 1000, true)

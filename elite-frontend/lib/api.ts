@@ -1,5 +1,5 @@
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://api.ethiohijra.com' : 'http://127.0.0.1:8000')
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://api.eliteemplyment.com' : 'http://127.0.0.1:8000')
 
 export const AUTH_STORAGE_KEY = 'hijra_auth'
 const GET_CACHE_PREFIX = 'hijra_get_cache_v1:'

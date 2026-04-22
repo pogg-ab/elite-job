@@ -6,7 +6,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', 'https://ethiohijra.com,https://admin.ethiohijra.com,https://api.ethiohijra.com,http://localhost:3000,http://localhost:5173')),
+    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', 'http://eliteemplyment.com,http://admin.eliteemplyment.com,http://api.eliteemplyment.com,http://localhost:3000,http://localhost:5173')),
 
     'allowed_origins_patterns' => [],
 
