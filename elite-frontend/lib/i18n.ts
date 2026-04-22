@@ -25,7 +25,7 @@ const resources = {
         none: 'No services found.'
       },
       home: {
-        badge: '3.1 Home Page',
+        badge: 'Home Page',
         introFallbackTitle: 'Company Introduction',
         introFallbackDescription: 'Elite Global Recruitment Platform introduces a trusted agency that connects Ethiopian talent with verified international employers through transparent, safe, and professional recruitment.',
         exploreJobs: 'Explore Jobs',
@@ -40,7 +40,7 @@ const resources = {
         vision: 'Vision',
         visionFallback: 'Become the leading recruitment bridge in the region with a platform focused on trust, compliance, and worker wellbeing.',
         featuredServicesTitle: 'Featured Services',
-        servicesManaged: 'Services managed from admin panel',
+        servicesManaged: '',
         noFeaturedServices: 'No featured services available yet.',
         quickSearchTitle: 'Quick Job Search',
         quickSearchDescription: 'Find opportunities by keyword and destination country.',
@@ -88,7 +88,7 @@ const resources = {
         }
       },
       about: {
-        badge: '3.2 About Us Page',
+        badge: 'About Us Page',
         title: 'About Elite',
         subtitle: 'Learn about our background, mission, legal standards, and recruitment quality commitments.',
         loading: 'Loading about page content...',
@@ -107,7 +107,7 @@ const resources = {
         certificationsFallback: 'Certification details are being updated.'
       },
       servicesPage: {
-        badge: '3.3 Services Page',
+        badge: 'Services Page',
         title: 'Services Offered by Elite Agency',
         subtitle: 'Explore key recruitment categories and detailed requirements before applying.',
         loading: 'Loading services...',
@@ -341,7 +341,8 @@ const resources = {
         methods: {
           email: 'Email',
           emailDesc: "Send us an email and we'll respond within 24 hours",
-          emailValue: 'support@hijra.com',
+          emailValue: 'ethioeliteagency@gmail.com',
+          phoneValue: '+251920156360',
           chat: 'Live Chat',
           chatDesc: 'Chat with our team in real-time',
           chatValue: 'Available 9am - 5pm EAT',
@@ -607,7 +608,7 @@ const resources = {
         signup: 'ይመዝገቡ',
       },
       home: {
-        badge: '3.1 የመነሻ ገፅ',
+        badge: 'የመነሻ ገፅ',
         introFallbackTitle: 'የኩባንያ መግቢያ',
         introFallbackDescription: 'Elite መድረክ የኢትዮጵያ ችሎታን ከተረጋገጡ ዓለምአቀፍ ቀጣሪዎች ጋር በግልፅ እና ደህንነት ያገናኛል።',
         exploreJobs: 'ስራዎችን ይመልከቱ',
@@ -622,7 +623,7 @@ const resources = {
         vision: 'ራዕይ',
         visionFallback: 'በክልሉ ውስጥ አስተማማኝ የቅጥር ድልድይ መሆን።',
         featuredServicesTitle: 'ተለይተው የቀረቡ አገልግሎቶች',
-        servicesManaged: 'ከአስተዳደር ፓነል የሚተዳደሩ አገልግሎቶች',
+        servicesManaged: '',
         noFeaturedServices: 'እስካሁን የተለየ አገልግሎት የለም።',
         quickSearchTitle: 'ፈጣን የስራ ፍለጋ',
         quickSearchDescription: 'በቁልፍ ቃል እና በሀገር ይፈልጉ።',
@@ -670,7 +671,7 @@ const resources = {
         }
       },
       about: {
-        badge: '3.2 ስለ እኛ ገፅ',
+        badge: 'ስለ እኛ ገፅ',
         title: 'ስለ Elite',
         subtitle: 'ስለ ታሪካችን፣ ተልዕኮችን እና የህግ መስፈርቶችን ይመልከቱ።',
         loading: 'የስለ እኛ ይዘት በመጫን ላይ...',
@@ -723,7 +724,8 @@ const resources = {
           multipleJobsAnswer: 'አዎ፣ እንደምትፈልጉት ብዙ ስራዎች ላይ ማመልከት ይችላሉ። የማመልከቻ ገደብ የለም።'
         },
         methods: {
-          emailValue: 'support@hijra.com',
+          emailValue: 'ethioeliteagency@gmail.com',
+          phoneValue: '+251920156360',
           chatValue: '9am - 5pm EAT ይገኛል',
           officeValue: 'አዲስ አበባ፣ ኢትዮጵያ'
         }
@@ -839,7 +841,7 @@ const resources = {
         signup: 'إنشاء حساب',
       },
       home: {
-        badge: '3.1 الصفحة الرئيسية',
+        badge: 'الصفحة الرئيسية',
         introFallbackTitle: 'مقدمة الشركة',
         introFallbackDescription: 'تربط منصة Elite المواهب الإثيوبية بأصحاب العمل الدوليين الموثوقين بطريقة شفافة وآمنة ومهنية.',
         exploreJobs: 'استكشف الوظائف',
@@ -854,7 +856,7 @@ const resources = {
         vision: 'الرؤية',
         visionFallback: 'أن نصبح جسر التوظيف الرائد في المنطقة.',
         featuredServicesTitle: 'الخدمات المميزة',
-        servicesManaged: 'خدمات تتم إدارتها من لوحة المشرف',
+        servicesManaged: '',
         noFeaturedServices: 'لا توجد خدمات مميزة حاليا.',
         quickSearchTitle: 'بحث سريع عن الوظائف',
         quickSearchDescription: 'ابحث حسب الكلمة المفتاحية والدولة.',
@@ -902,7 +904,7 @@ const resources = {
         }
       },
       about: {
-        badge: '3.2 صفحة من نحن',
+        badge: 'صفحة من نحن',
         title: 'عن Elite',
         subtitle: 'تعرف على خلفيتنا ورسالتنا ومعاييرنا القانونية وجودة التوظيف.',
         loading: 'جار تحميل محتوى صفحة من نحن...',
@@ -955,7 +957,8 @@ const resources = {
           multipleJobsAnswer: 'نعم، يمكنك التقديم على عدد غير محدود من الوظائف.'
         },
         methods: {
-          emailValue: 'support@hijra.com',
+          emailValue: 'ethioeliteagency@gmail.com',
+          phoneValue: '+251920156360',
           chatValue: 'متاح من 9 صباحا إلى 5 مساء بتوقيت شرق أفريقيا',
           officeValue: 'أديس أبابا، إثيوبيا'
         }
@@ -1071,7 +1074,7 @@ const resources = {
         signup: 'Galmaa’i',
       },
       home: {
-        badge: '3.1 Fuula Manaa',
+        badge: 'Fuula Manaa',
         introFallbackTitle: 'Seensa Dhaabbataa',
         introFallbackDescription: 'Maddi Elite dandeettii Itoophiyaa qacartoota idil-addunyaa amanamoo waliin walqunnamsiisa.',
         exploreJobs: 'Hojii Ilaali',
@@ -1086,7 +1089,7 @@ const resources = {
         vision: 'Mulata',
         visionFallback: 'Riqa qacarrii duraa naannichaa tauu.',
         featuredServicesTitle: 'Tajaajiloota Filatamoo',
-        servicesManaged: 'Tajaajiloota admin panel irraa bulfaman',
+        servicesManaged: '',
         noFeaturedServices: 'Tajaajilli filatamaan amma hin jiru.',
         quickSearchTitle: 'Barbaacha Hojii Ariifataa',
         quickSearchDescription: 'Jecha furtuu fi biyyaan barbaadi.',
@@ -1134,7 +1137,7 @@ const resources = {
         }
       },
       about: {
-        badge: '3.2 Fuula Waaee Keenya',
+        badge: 'Fuula Waaee Keenya',
         title: 'Waaee Elite',
         subtitle: 'Seenaa keenya, ergama, seera fi qulqullina qacarrii baradhaa.',
         loading: 'Qabiyyee fuula waaee keenyaa feaa jira...',
@@ -1187,7 +1190,8 @@ const resources = {
           multipleJobsAnswer: 'Eeyyee, hojii barbaadde hundarratti iyyachuu dandeessa. Daangaan iyyannoo hin jiru.'
         },
         methods: {
-          emailValue: 'support@hijra.com',
+          emailValue: 'ethioeliteagency@gmail.com',
+          phoneValue: '+251920156360',
           chatValue: 'Saaatii 9 ganamaa hanga 5 galgalaa EAT ni jira',
           officeValue: 'Addis Ababa, Itoophiyaa'
         }

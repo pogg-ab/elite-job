@@ -15,3 +15,6 @@ next.user-config.*
 node_modules/
 .next/
 .DS_Store
+
+# Add this line:
+*.zip

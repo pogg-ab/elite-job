@@ -3,15 +3,18 @@
 import React, { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Documents } from '@/lib/api'
+import { toast } from '@/hooks/use-toast'
 
 interface DocumentUploadProps {
   onUpload?: (file: File) => void
   documentType?: string
+  autoUpload?: boolean
 }
 
 const DocumentUpload: React.FC<DocumentUploadProps> = ({
   onUpload,
-  documentType = 'Document'
+  documentType = 'Document',
+  autoUpload = true,
 }) => {
   const [isDragging, setIsDragging] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -20,6 +23,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
   const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png']
   const maxSize = 5 * 1024 * 1024 // 5MB
+  const doAutoUpload = autoUpload !== false
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault()
@@ -52,12 +56,12 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
   const handleFile = (file: File) => {
     if (!allowedTypes.includes(file.type)) {
-      alert('Invalid file type. Please upload PDF, JPG, or PNG.')
+      toast({ title: 'Invalid file type', description: 'Please upload PDF, JPG, or PNG.', variant: 'destructive' })
       return
     }
 
     if (file.size > maxSize) {
-      alert('File size exceeds 5MB limit.')
+      toast({ title: 'File too large', description: 'File size exceeds 5MB limit.', variant: 'destructive' })
       return
     }
 
@@ -69,15 +73,22 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     if (!uploadedFile) return
     setIsUploading(true)
     try {
-      const fd = new FormData()
-      fd.append('file', uploadedFile)
-      fd.append('document_type', documentType)
-      await Documents.upload(fd)
-      if (onUpload) onUpload(uploadedFile)
-      setUploadedFile(null)
-      alert('Document uploaded successfully')
+      if (doAutoUpload) {
+        const fd = new FormData()
+        fd.append('file', uploadedFile)
+        fd.append('document_type', documentType)
+        await Documents.upload(fd)
+        if (onUpload) await onUpload(uploadedFile)
+        setUploadedFile(null)
+        toast({ title: 'Upload complete', description: `${documentType} uploaded successfully.` })
+      } else {
+        // notify parent about selected file but don't upload
+        if (onUpload) await onUpload(uploadedFile)
+        setUploadedFile(null)
+        toast({ title: 'File ready', description: `${uploadedFile.name} is ready to submit.` })
+      }
     } catch (err: any) {
-      alert(err?.message ?? 'Upload failed')
+      toast({ title: 'Upload failed', description: err?.message ?? 'Upload failed', variant: 'destructive' })
     } finally {
       setIsUploading(false)
     }

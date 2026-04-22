@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { Button } from '@/components/ui/button'
 import { Profile as ProfileApi, Documents, downloadFile, Auth } from '@/lib/api'
+import DocumentUpload from '@/components/DocumentUpload'
 import { calculateProfileCompletion } from '@/lib/profileCompletion'
 import { useTranslation } from 'react-i18next'
 
@@ -19,6 +20,7 @@ const ProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
 
   const [uploadFiles, setUploadFiles] = useState<Record<string, File | null>>(() => ({
     'Passport Copy': null,
@@ -72,6 +74,25 @@ const ProfilePage: React.FC = () => {
     setSaving(true)
     setError(null)
     try {
+      // validate phone fields
+      try {
+        const { isValidEthiopianPhone, phoneValidationMessage, normalizeEthiopianPhone } = await import('@/lib/validation')
+        if (profile.phone && !isValidEthiopianPhone(profile.phone)) {
+          const msg = phoneValidationMessage(profile.phone)
+          setPhoneError(msg)
+          setError(msg)
+          setSaving(false)
+          return
+        }
+        if (agency?.company_phone && !isValidEthiopianPhone(agency.company_phone)) {
+          const msg = phoneValidationMessage(agency.company_phone)
+          setError(msg)
+          setSaving(false)
+          return
+        }
+      } catch (err) {
+        // ignore validation utility errors
+      }
       const payload: any = {
         name: profile.name,
         phone: profile.phone,
@@ -100,6 +121,13 @@ const ProfilePage: React.FC = () => {
           skills: profile.profile?.skills ?? [],
         }
       }
+
+      // normalize phone values if possible
+      try {
+        const { normalizeEthiopianPhone } = await import('@/lib/validation')
+        if (payload.phone) payload.phone = normalizeEthiopianPhone(payload.phone)
+        if (payload.foreign_agency?.company_phone) payload.foreign_agency.company_phone = normalizeEthiopianPhone(payload.foreign_agency.company_phone)
+      } catch {}
 
       const saveResult: any = await ProfileApi.update(payload)
       const refreshed: any = saveResult?.user ?? (await ProfileApi.get())
@@ -300,7 +328,9 @@ const ProfilePage: React.FC = () => {
 
                       <label className="flex flex-col">
                         <span className={labelClass}>{t('profilePage.phone')}</span>
-                        <input value={profile.phone ?? ''} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} className={inputClass} />
+                          <input placeholder="+2519XXXXXXXX" value={profile.phone ?? ''} onChange={(e) => { setProfile({ ...profile, phone: e.target.value }); setPhoneError(null) }} className={inputClass} />
+                          {phoneError && <p className="mt-2 text-sm text-red-600">{phoneError}</p>}
+                          {!phoneError && <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>}
                       </label>
 
                       <label className="flex flex-col">
@@ -435,11 +465,13 @@ const ProfilePage: React.FC = () => {
 
                         <label className="flex flex-col">
                           <span className={labelClass}>{t('profilePage.companyPhone', { defaultValue: 'Company Phone' })}</span>
-                          <input
-                            value={agency?.company_phone ?? ''}
-                            onChange={(e) => setProfile({ ...profile, foreign_agency: { ...(agency ?? {}), company_phone: e.target.value } })}
-                            className={inputClass}
-                          />
+                            <input
+                              placeholder="+2519XXXXXXXX"
+                              value={agency?.company_phone ?? ''}
+                              onChange={(e) => setProfile({ ...profile, foreign_agency: { ...(agency ?? {}), company_phone: e.target.value } })}
+                              className={inputClass}
+                            />
+                            <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>
                         </label>
 
                         <label className="flex flex-col">
@@ -492,23 +524,20 @@ const ProfilePage: React.FC = () => {
                           <p className="text-sm font-semibold text-foreground">{type}</p>
                           {existing && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">Uploaded</span>}
                         </div>
-                        <input
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) => {
-                            const next = e.target.files?.[0] ?? null
-                            setUploadFiles((prev) => ({ ...prev, [type]: next }))
-                          }}
-                          className={inputClass}
-                        />
-                        <div className="mt-3">
-                          <Button
-                            onClick={() => handleUploadByType(type)}
-                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                            disabled={isUploading || !uploadFiles[type]}
-                          >
-                            {isUploading ? t('profilePage.uploading') : `${t('profilePage.uploadDocument')} (${type})`}
-                          </Button>
+                        <div className="mt-2">
+                          <DocumentUpload documentType={type} onUpload={async () => {
+                            setUploadingType(type)
+                            setError(null)
+                            try {
+                              const refreshed = await ProfileApi.get()
+                              setProfile(refreshed)
+                              setUploadFiles((prev) => ({ ...prev, [type]: null }))
+                            } catch (err: any) {
+                              setError(err?.message ?? t('profilePage.uploadFailed'))
+                            } finally {
+                              setUploadingType(null)
+                            }
+                          }} />
                         </div>
                       </div>
                     )

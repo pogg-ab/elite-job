@@ -226,62 +226,29 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Documents & Quick Actions */}
+          {/* Quick Actions */}
           <div className="space-y-8">
-            {/* Documents */}
-            <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-foreground">{t('dashboard.documents')}</h3>
-              </div>
-              
-              <div className="space-y-3">
-                {documents.map((doc, idx) => (
-                  <div key={idx} className="rounded-xl border border-border bg-background/80 p-4 transition hover:border-primary/30">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{doc.icon}</span>
-                        <div>
-                          <p className="font-semibold text-foreground text-sm">{doc.name}</p>
-                          <p className="text-xs text-foreground/60">
-                            {String(doc.status).toLowerCase() === 'verified' ? '✓ ' : ''}
-                            {doc.status}
-                          </p>
-                        </div>
-                      </div>
-                      {String(doc.status).toLowerCase() === 'not uploaded' && (
-                        <Button variant="ghost" className="text-primary text-xs hover:bg-primary/10">
-                          {t('dashboard.upload')}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <Button className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-                {t('dashboard.manageAllDocuments')}
-              </Button>
-            </div>
-
-            {/* Quick Actions */}
             <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
               <h3 className="text-xl font-bold text-foreground mb-6">{t('dashboard.quickActions')}</h3>
-              
+
               <div className="space-y-3">
                 <Link href="/Jobs">
                   <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-primary/5 hover:border-primary/20">
                     <span className="mr-3">🔍</span> {t('dashboard.searchNewJobs')}
                   </Button>
                 </Link>
-                <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-primary/5 hover:border-primary/20">
-                  <span className="mr-3">📝</span> {t('dashboard.updateProfile')}
-                </Button>
-                <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-primary/5 hover:border-primary/20">
-                  <span className="mr-3">❤️</span> {t('dashboard.viewSavedJobs')}
-                </Button>
-                <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-primary/5 hover:border-primary/20">
-                  <span className="mr-3">📞</span> {t('dashboard.contactSupport')}
-                </Button>
+
+                <Link href="/Profile">
+                  <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-primary/5 hover:border-primary/20">
+                    <span className="mr-3">📝</span> {t('dashboard.updateProfile')}
+                  </Button>
+                </Link>
+
+                <Link href="/Contact">
+                  <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-primary/5 hover:border-primary/20">
+                    <span className="mr-3">📞</span> {t('dashboard.contactSupport')}
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
