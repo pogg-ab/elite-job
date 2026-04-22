@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import Footer from '@/components/Footer'
 import { API_BASE_URL } from '@/lib/api'
 import { Button } from '@/components/ui/button'
+import DocumentUpload from '@/components/DocumentUpload'
 import { useRouter } from 'next/navigation'
 
 export default function EmployerRequestPage() {
@@ -17,6 +18,7 @@ export default function EmployerRequestPage() {
   const [licenseFile, setLicenseFile] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
   function updateJob(idx: number, key: string, value: any) {
@@ -50,6 +52,21 @@ export default function EmployerRequestPage() {
     if (!form.contact_person.trim()) { setError('Contact person is required'); return }
     if (!form.email.trim()) { setError('Email is required'); return }
     if (!form.phone.trim()) { setError('Phone is required'); return }
+    // validate phone
+    try {
+      const { isValidEthiopianPhone, phoneValidationMessage, normalizeEthiopianPhone } = await import('@/lib/validation')
+      if (!isValidEthiopianPhone(form.phone)) {
+        const msg = phoneValidationMessage(form.phone)
+        setPhoneError(msg)
+        setError(msg)
+        return
+      }
+      // normalize before submit
+      setForm((f) => ({ ...f, phone: normalizeEthiopianPhone(f.phone) }))
+      setPhoneError(null)
+    } catch (e) {
+      // if validation util fails for some reason, allow but don't normalize
+    }
     if (!form.country.trim()) { setError('Country is required'); return }
     if (jobs.length === 0) { setError('Add at least one job'); return }
     if (jobs.some(j => !j.job_title.trim())) { setError('All jobs must have a title'); return }
@@ -151,13 +168,16 @@ export default function EmployerRequestPage() {
                       type="email"
                       className="rounded-lg border border-border bg-background px-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
-                    <input
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                      placeholder="Phone"
-                      required
-                      className="rounded-lg border border-border bg-background px-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
+                      <input
+                        type="text"
+                        value={form.phone}
+                        onChange={(e) => { setForm({ ...form, phone: e.target.value }); setPhoneError(null) }}
+                        placeholder="+2519XXXXXXXX"
+                        required
+                        className="rounded-lg border border-border bg-background px-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                      {phoneError && <p className="mt-2 text-sm text-red-600">{phoneError}</p>}
+                      {!phoneError && <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>}
                   </div>
                   <input
                     value={form.country}
@@ -215,19 +235,8 @@ export default function EmployerRequestPage() {
 
                 <div>
                   <label className="block font-medium">Upload License (pdf/jpg/png)</label>
-                  <div className="mt-3 flex items-center gap-3">
-                    <input id="licenseFile" type="file" accept=".pdf,image/*" onChange={(e) => setLicenseFile(e.target.files?.[0] ?? null)} className="hidden" required />
-                    <label htmlFor="licenseFile" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90">
-
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14m7-7H5" />
-                      </svg>
-                      <span>{licenseFile ? t('employerRequest.form.changeFile', 'Change File') : t('employerRequest.form.chooseFile', 'Choose File')}</span>
-                    </label>
-                    <div className="text-sm text-foreground/70">{licenseFile ? licenseFile.name : 'No file chosen'}</div>
-                    {licenseFile && (
-                      <button type="button" onClick={() => setLicenseFile(null)} className="text-red-600 underline">{t('employerRequest.form.removeFile', 'Remove')}</button>
-                    )}
+                  <div className="mt-3">
+                    <DocumentUpload documentType="License" autoUpload={false} onUpload={(f) => setLicenseFile(f)} />
                   </div>
                   <p className="mt-2 text-xs text-foreground/60">Accepted formats: PDF, JPG, PNG. Max size: 5MB.</p>
                 </div>

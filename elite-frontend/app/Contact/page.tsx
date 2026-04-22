@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Profile, Messages, Faqs, getAccessToken } from '@/lib/api'
 import { useTranslation } from 'react-i18next'
 
+const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '251920156360'
+
 const ContactPage: React.FC = () => {
   const { t } = useTranslation()
   const LOCAL_HISTORY_KEY = 'hijira_contact_history'
@@ -170,6 +172,17 @@ const ContactPage: React.FC = () => {
     try {
       const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:8000'
       const senderEmail = user?.email ?? formData.email
+      // validate phone if provided (guest users)
+      if (!user) {
+        const { isValidEthiopianPhone, phoneValidationMessage, normalizeEthiopianPhone } = await import('@/lib/validation')
+        if (!isValidEthiopianPhone(formData.phone)) {
+          setIsSubmitting(false)
+          showNotice('error', phoneValidationMessage(formData.phone))
+          return
+        }
+        formData.phone = normalizeEthiopianPhone(formData.phone)
+      }
+
       const payload = {
         name: formData.name,
         email: senderEmail,
@@ -291,7 +304,7 @@ const ContactPage: React.FC = () => {
       icon: '📞',
       title: t('contactPage.methods.phone'),
       description: t('contactPage.methods.phoneDesc'),
-      value: '+251 1 234 5678'
+      value: t('contactPage.methods.phoneValue')
     },
     {
       icon: '📍',
@@ -374,11 +387,7 @@ const ContactPage: React.FC = () => {
 
                   {/* WhatsApp floating button */}
                   <a
-                    href={
-                      (typeof window !== 'undefined' && (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '251900000000'))
-                        ? `https://wa.me/${(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '251900000000')}?text=${encodeURIComponent('Hello I need information')}`
-                        : '#'
-                    }
+                    href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('Hello I need information')}`}
                     target="_blank"
                     rel="noreferrer"
                     className="fixed right-4 bottom-6 z-50 inline-flex items-center gap-3 rounded-full bg-primary px-4 py-3 text-primary-foreground shadow-lg hover:bg-primary/90"

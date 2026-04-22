@@ -65,6 +65,9 @@ type HomePayload = {
   }
 }
 
+const DEFAULT_CONTACT_EMAIL = 'ethioeliteagency@gmail.com'
+const DEFAULT_CONTACT_PHONE = '+251920156360'
+
 const Home: React.FC = () => {
   const { t } = useTranslation()
   const { language } = useLanguage()
@@ -277,12 +280,11 @@ const Home: React.FC = () => {
       <section className="px-4 py-16 bg-surface">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-foreground text-center">{t('home.featuredServicesTitle')}</h2>
-          <p className="mt-3 text-center text-foreground/70">{t('home.servicesManaged')}</p>
+          
 
           <div className="mt-10 grid gap-6 md:grid-cols-3">
             {featuredServices.map((service, index) => (
               <article key={service.id ?? index} className="rounded-2xl border border-border bg-card p-6 transition hover:shadow-md hover:-translate-y-0.5">
-                <span className="inline-flex rounded-md bg-primary/10 px-2 py-1 text-xs font-bold text-primary">SV{index + 1}</span>
                 <h3 className="mt-4 text-xl font-semibold text-foreground">{getLocalizedText(service.title, language)}</h3>
                 <p className="mt-2 text-foreground/70 leading-relaxed">{getLocalizedText(service.description, language)}</p>
               </article>
@@ -434,8 +436,8 @@ const Home: React.FC = () => {
               {getLocalizedText(contact?.description, language, 'Reach our team for inquiries about recruitment, partnership, and candidate onboarding.')}
             </p>
             <div className="mt-6 space-y-2 text-foreground/80">
-              <p>Email: {(contact?.content?.email as string) || 'info@hijra.global'}</p>
-              <p>Phone: {(contact?.content?.phone as string) || '+251 11 000 0000'}</p>
+              <p>Email: {DEFAULT_CONTACT_EMAIL}</p>
+              <p>Phone: {DEFAULT_CONTACT_PHONE}</p>
               <p>Address: {(contact?.content?.address as string) || 'Addis Ababa, Ethiopia'}</p>
             </div>
           </div>

@@ -8,12 +8,15 @@ import Footer from '@/components/Footer'
 import { Button } from '@/components/ui/button'
 import { Auth } from '@/lib/api'
 import { useTranslation } from 'react-i18next'
+import DocumentUpload from '@/components/DocumentUpload'
 
 export default function RegisterPartnerPage() {
   const { t } = useTranslation()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
+  const [phoneError, setPhoneError] = useState<string | null>(null)
+  const [companyPhoneError, setCompanyPhoneError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -29,6 +32,8 @@ export default function RegisterPartnerPage() {
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [event.target.name]: event.target.value }))
+    if (event.target.name === 'phone') setPhoneError(null)
+    if (event.target.name === 'company_phone') setCompanyPhoneError(null)
   }
 
   const router = useRouter()
@@ -45,8 +50,36 @@ export default function RegisterPartnerPage() {
 
     setIsSubmitting(true)
     try {
+      // validate Ethiopian phone numbers
+      try {
+        const { isValidEthiopianPhone, phoneValidationMessage, normalizeEthiopianPhone } = await import('@/lib/validation')
+        if (!isValidEthiopianPhone(formData.phone)) {
+          const msg = phoneValidationMessage(formData.phone)
+          setPhoneError(msg)
+          setError(msg)
+          setIsSubmitting(false)
+          return
+        }
+        if (formData.company_phone && !isValidEthiopianPhone(formData.company_phone)) {
+          const msg = phoneValidationMessage(formData.company_phone)
+          setCompanyPhoneError(msg)
+          setError(msg)
+          setIsSubmitting(false)
+          return
+        }
+      } catch (err) {
+        // ignore validation import errors
+      }
+
       const body = new FormData()
-      Object.entries(formData).forEach(([key, value]) => body.append(key, value))
+      // normalize phones if validation util available
+      let normalized = { ...formData }
+      try {
+        const { normalizeEthiopianPhone } = await import('@/lib/validation')
+        if (normalized.phone) normalized.phone = normalizeEthiopianPhone(normalized.phone)
+        if (normalized.company_phone) normalized.company_phone = normalizeEthiopianPhone(normalized.company_phone)
+      } catch {}
+      Object.entries(normalized).forEach(([key, value]) => body.append(key, value))
       body.append('license_file', licenseFile)
 
       await Auth.registerPartner(body)
@@ -90,23 +123,33 @@ export default function RegisterPartnerPage() {
           <div className="grid md:grid-cols-2 gap-4">
             <input name="name" value={formData.name} onChange={handleChange} placeholder={t('registerPartnerPage.contactName')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
             <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder={t('registerPartnerPage.contactEmail')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
-            <input name="phone" value={formData.phone} onChange={handleChange} placeholder={t('registerPartnerPage.phone')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
+            <div>
+              <input name="phone" value={formData.phone} onChange={handleChange} placeholder={t('registerPartnerPage.phone') || '+2519XXXXXXXX'} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
+              {phoneError && <p className="mt-2 text-sm text-red-600">{phoneError}</p>}
+              {!phoneError && <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>}
+            </div>
             <input name="country" value={formData.country} onChange={handleChange} placeholder={t('registerPartnerPage.country')} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <input name="company_name" value={formData.company_name} onChange={handleChange} placeholder={t('registerPartnerPage.companyName')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
             <input type="email" name="company_email" value={formData.company_email} onChange={handleChange} placeholder={t('registerPartnerPage.companyEmail')} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
-            <input name="company_phone" value={formData.company_phone} onChange={handleChange} placeholder={t('registerPartnerPage.companyPhone')} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
-            <label className="block rounded-lg border border-border bg-background px-4 py-3">
+            <div>
+              <input name="company_phone" value={formData.company_phone} onChange={handleChange} placeholder={t('registerPartnerPage.companyPhone') || '+2519XXXXXXXX'} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
+              {companyPhoneError && <p className="mt-2 text-sm text-red-600">{companyPhoneError}</p>}
+              {!companyPhoneError && <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>}
+            </div>
+            <div className="block rounded-lg border border-border bg-background px-4 py-3">
               <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-foreground/70">
                 {t('registerPartnerPage.uploadLicenseTitle', { defaultValue: 'Upload License Document' })}
               </span>
               <span className="mb-2 block text-xs text-foreground/60">
                 {t('registerPartnerPage.uploadLicenseHelp', { defaultValue: 'Attach your company license (PDF, JPG, PNG) for approval review.' })}
               </span>
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => setLicenseFile(event.target.files?.[0] ?? null)} required className="w-full text-foreground outline-none" />
-            </label>
+              <div className="mt-2">
+                <DocumentUpload documentType="License" autoUpload={false} onUpload={(f) => setLicenseFile(f)} />
+              </div>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">

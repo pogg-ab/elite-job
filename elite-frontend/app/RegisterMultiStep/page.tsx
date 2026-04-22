@@ -13,6 +13,8 @@ const RegisterMultiStep: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [phoneError, setPhoneError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     // Step 1
     fullName: '',
@@ -67,6 +69,7 @@ const RegisterMultiStep: React.FC = () => {
         ...formData,
         [name]: value
       })
+      if (name === 'phone') setPhoneError(null)
     }
   }
 
@@ -117,11 +120,35 @@ const RegisterMultiStep: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    // validate current step before proceeding
+    const runValidate = (step: number) => validateStep(step)
+
+    if (currentStep !== 3) {
+      const ok = runValidate(currentStep)
+      if (!ok) return
+      setCurrentStep(currentStep + 1)
+      return
+    }
 
     if (currentStep === 3 && isStep3Valid) {
       setIsSubmitting(true)
 
       try {
+        // validate phone before submit
+        try {
+          const { isValidEthiopianPhone, phoneValidationMessage, normalizeEthiopianPhone } = await import('@/lib/validation')
+          if (!isValidEthiopianPhone(formData.phone)) {
+            const msg = phoneValidationMessage(formData.phone)
+            setPhoneError(msg)
+            setError(msg)
+            setIsSubmitting(false)
+            return
+          }
+          // normalize for payload
+          formData.phone = normalizeEthiopianPhone(formData.phone)
+        } catch (err) {
+          // if validation util fails, continue without blocking
+        }
         const payload = {
           name: formData.fullName.trim(),
           email: formData.email,
@@ -164,9 +191,42 @@ const RegisterMultiStep: React.FC = () => {
       } finally {
         setIsSubmitting(false)
       }
-    } else if (canProceed) {
-      setCurrentStep(currentStep + 1)
     }
+  }
+
+  function validateEmail(email: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
+
+  function validateStep(step: number) {
+    const next: Record<string, string> = {}
+    if (step === 1) {
+      if (!formData.fullName || !String(formData.fullName).trim()) next.fullName = t('registerPage.errors.fullNameRequired') || 'Full name is required'
+      if (!formData.email || !String(formData.email).trim()) next.email = t('registerPage.errors.emailRequired') || 'Email is required'
+      else if (!validateEmail(formData.email)) next.email = t('registerPage.errors.invalidEmail') || 'Enter a valid email address'
+      if (!formData.phone || !String(formData.phone).trim()) next.phone = t('registerPage.errors.phoneRequired') || 'Phone is required'
+      if (!formData.password) next.password = t('registerPage.errors.passwordRequired') || 'Password is required'
+      else if (String(formData.password).length < 8) next.password = t('registerPage.errors.passwordShort') || 'Password must be at least 8 characters'
+      if (!formData.confirmPassword) next.confirmPassword = t('registerPage.errors.confirmPasswordRequired') || 'Please confirm your password'
+      else if (formData.password !== formData.confirmPassword) next.confirmPassword = t('registerPage.errors.passwordMismatch') || 'Passwords do not match'
+    }
+
+    if (step === 2) {
+      if (!formData.gender) next.gender = t('registerPage.errors.genderRequired') || 'Gender is required'
+      if (!formData.age) next.age = t('registerPage.errors.ageRequired') || 'Age is required'
+      else if (Number(formData.age) < 18 || Number(formData.age) > 65) next.age = t('registerPage.errors.ageRange') || 'Age must be between 18 and 65'
+      if (!formData.educationLevel) next.educationLevel = t('registerPage.errors.educationRequired') || 'Education level is required'
+      if (!formData.experienceSummary || !String(formData.experienceSummary).trim()) next.experienceSummary = t('registerPage.errors.experienceRequired') || 'Experience summary is required'
+      if (!formData.passportStatus) next.passportStatus = t('registerPage.errors.passportRequired') || 'Passport status is required'
+    }
+
+    if (step === 3) {
+      if (requiredTerms && !formData.agreeTerms) next.agreeTerms = t('registerPage.errors.mustAgreeTerms') || 'You must agree to the terms'
+      if (requiredPrivacy && !formData.agreePrivacy) next.agreePrivacy = t('registerPage.errors.mustAgreePrivacy') || 'You must agree to the privacy policy'
+    }
+
+    setErrors(next)
+    return Object.keys(next).length === 0
   }
 
   function markdownToHtml(md: string | null) {
@@ -249,8 +309,9 @@ const RegisterMultiStep: React.FC = () => {
                   value={formData.fullName}
                   onChange={handleChange}
                   placeholder={t('registerPage.yourFullName')}
-                  className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
+                  className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.fullName ? 'border-red-400' : 'border-border'}`}
                 />
+                {errors.fullName && <p className="mt-2 text-sm text-red-600">{errors.fullName}</p>}
               </div>
 
               <div>
@@ -264,8 +325,9 @@ const RegisterMultiStep: React.FC = () => {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="you@example.com"
-                  className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
+                  className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.email ? 'border-red-400' : 'border-border'}`}
                 />
+                {errors.email && <p className="mt-2 text-sm text-red-600">{errors.email}</p>}
               </div>
 
               <div>
@@ -278,9 +340,12 @@ const RegisterMultiStep: React.FC = () => {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  placeholder="+251 9 XX XXX XXXX"
-                  className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
+                  placeholder="+2519XXXXXXXX"
+                  className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.phone ? 'border-red-400' : 'border-border'}`}
                 />
+                {errors.phone && <p className="mt-2 text-sm text-red-600">{errors.phone}</p>}
+                {!errors.phone && phoneError && <p className="mt-2 text-sm text-red-600">{phoneError}</p>}
+                {!errors.phone && !phoneError && <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>}
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
@@ -295,8 +360,9 @@ const RegisterMultiStep: React.FC = () => {
                     value={formData.password}
                     onChange={handleChange}
                     placeholder={t('registerPage.createStrongPassword')}
-                    className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
+                    className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.password ? 'border-red-400' : 'border-border'}`}
                   />
+                  {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
                 </div>
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-semibold text-foreground mb-2">
@@ -309,8 +375,9 @@ const RegisterMultiStep: React.FC = () => {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder={t('registerPage.confirmYourPassword')}
-                    className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
+                    className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.confirmPassword ? 'border-red-400' : 'border-border'}`}
                   />
+                  {errors.confirmPassword && <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>}
                 </div>
               </div>
             </div>
@@ -331,13 +398,14 @@ const RegisterMultiStep: React.FC = () => {
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
+                  className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.gender ? 'border-red-400' : 'border-border'}`}
                 >
                   <option value="">{t('registerPage.selectGender')}</option>
                   <option value="male">{t('registerPage.male')}</option>
                   <option value="female">{t('registerPage.female')}</option>
                   <option value="other">{t('registerPage.other')}</option>
                 </select>
+                {errors.gender && <p className="mt-2 text-sm text-red-600">{errors.gender}</p>}
                 </div>
 
                 <div>
@@ -351,8 +419,9 @@ const RegisterMultiStep: React.FC = () => {
                     value={formData.age}
                     onChange={handleChange}
                     placeholder="18 - 65"
-                    className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
+                      className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.age ? 'border-red-400' : 'border-border'}`}
                   />
+                    {errors.age && <p className="mt-2 text-sm text-red-600">{errors.age}</p>}
                 </div>
               </div>
 
@@ -402,11 +471,13 @@ const RegisterMultiStep: React.FC = () => {
                   <option value="">{t('registerPage.selectEducation')}</option>
                   {educationLevels.map(e => <option key={e} value={e}>{e}</option>)}
                 </select>
+                {errors.educationLevel && <p className="mt-2 text-sm text-red-600">{errors.educationLevel}</p>}
               </div>
 
               <div>
                 <label htmlFor="experienceSummary" className="block text-sm font-semibold text-foreground mb-2">{t('registerPage.experience')}</label>
                 <textarea id="experienceSummary" name="experienceSummary" value={formData.experienceSummary} onChange={handleChange} placeholder={t('registerPage.experiencePlaceholder')} rows={4} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none resize-none" />
+                {errors.experienceSummary && <p className="mt-2 text-sm text-red-600">{errors.experienceSummary}</p>}
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
@@ -446,6 +517,7 @@ const RegisterMultiStep: React.FC = () => {
                   <option value="applied">{t('registerPage.appliedInProcess')}</option>
                   <option value="none">{t('registerPage.noPassport')}</option>
                 </select>
+                {errors.passportStatus && <p className="mt-2 text-sm text-red-600">{errors.passportStatus}</p>}
               </div>
 
               <div>
@@ -513,6 +585,13 @@ const RegisterMultiStep: React.FC = () => {
                 )}
               </div>
 
+              {(errors.agreeTerms || errors.agreePrivacy) && (
+                <div className="mt-2">
+                  {errors.agreeTerms && <p className="text-sm text-red-600">{errors.agreeTerms}</p>}
+                  {errors.agreePrivacy && <p className="text-sm text-red-600">{errors.agreePrivacy}</p>}
+                </div>
+              )}
+
               <div className="bg-primary/10 dark:bg-primary/20 border border-primary/25 dark:border-primary/35 rounded-lg p-4">
                 <p className="text-sm text-primary dark:text-primary-foreground">
                   ✓ {t('registerPage.accountCreatedInfo')}
@@ -536,7 +615,7 @@ const RegisterMultiStep: React.FC = () => {
             <Button
               type="submit"
               className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold disabled:opacity-50 disabled:cursor-not-allowed h-11"
-              disabled={!canProceed || isSubmitting}
+              disabled={isSubmitting}
             >
               {isSubmitting ? t('registerPage.creatingAccount') : currentStep === 3 ? t('registerPage.createAccount') : t('registerPage.continue')}
             </Button>

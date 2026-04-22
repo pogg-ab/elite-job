@@ -1,5 +1,5 @@
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://api.ethioElite.com' : 'http://127.0.0.1:8000')
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? (process.env.NODE_ENV === 'production' ? 'https://api.eliteemplyment.com' : 'http://127.0.0.1:8000')
 
 export const ADMIN_AUTH_STORAGE_KEY = 'Elite_admin_auth'
 const GET_CACHE_PREFIX = 'Elite_admin_get_cache_v1:'
