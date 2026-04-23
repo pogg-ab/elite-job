@@ -29,8 +29,23 @@ export function isValidEthiopianPhone(input: string): boolean {
   return /^\+2519\d{8}$/.test(val)
 }
 
-export function phoneValidationMessage(input?: string): string {
-  if (!input) return 'Phone number is required.'
-  if (!isValidEthiopianPhone(input)) return 'Enter a valid Ethiopian phone number (e.g. +2519XXXXXXXX).'
+export function isValidPhone(input: string): boolean {
+  if (!input) return false
+  const cleaned = input.replace(/[\s-()]/g, '')
+  return /^\+?[0-9]{7,15}$/.test(cleaned)
+}
+
+export function validateEmail(email: string): boolean {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return re.test(email)
+}
+
+export function phoneValidationMessage(input: string | undefined, ethioOnly: boolean = true): string {
+  if (!input) return 'Phone is required'
+  if (ethioOnly) {
+    if (!isValidEthiopianPhone(input)) return 'Invalid Ethiopian phone number'
+  } else {
+    if (!isValidPhone(input)) return 'Invalid phone number'
+  }
   return ''
 }

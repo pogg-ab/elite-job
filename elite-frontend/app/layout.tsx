@@ -14,8 +14,8 @@ export const metadata: Metadata = {
   generator: 'Elite',
   keywords: 'recruitment, employment, Ethiopian jobs, international careers, job portal',
   icons: {
-    icon: '/logo.jpeg',
-    apple: '/logo.jpeg',
+    icon: '/logo.PNG',
+    apple: '/logo.PNG',
   },
 
 }

@@ -96,10 +96,7 @@ const DashboardPage: React.FC = () => {
     if (isPartner) {
       const activeApplicants = partnerApplicants.length
       return [
-        { label: t('dashboard.activeApplicants'), value: String(activeApplicants), icon: '📋', color: 'from-blue-500 to-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950' },
-        { label: t('dashboard.verifiedDocuments'), value: `${verifiedDocs} ${t('dashboard.of')} ${totalDocs}`, icon: '✅', color: 'from-primary to-primary/70', bgColor: 'bg-primary/10 dark:bg-primary/20' },
-        { label: t('dashboard.profileComplete'), value: `${completion.percent}%`, icon: '📈', color: 'from-amber-500 to-orange-600', bgColor: 'bg-amber-50 dark:bg-amber-950' },
-        { label: t('dashboard.messages'), value: '0', icon: '💬', color: 'from-purple-500 to-purple-600', bgColor: 'bg-purple-50 dark:bg-purple-950' }
+        { label: t('dashboard.activeApplicants'), value: String(activeApplicants), icon: '📋', color: 'from-blue-500 to-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950' }
       ]
     }
 
@@ -111,6 +108,11 @@ const DashboardPage: React.FC = () => {
       { label: t('dashboard.messages'), value: '0', icon: '💬', color: 'from-purple-500 to-purple-600', bgColor: 'bg-purple-50 dark:bg-purple-950' }
     ]
   }, [applications, documents, user, partnerApplicants, t])
+
+  const isPartner = useMemo(() => {
+    const role = user?.role ?? user?.profile?.role ?? null
+    return role === 'partner' || role === 'agency' || user?.is_partner || user?.profile?.is_partner
+  }, [user])
 
   return (
     <main className="min-h-screen flex flex-col bg-background">
@@ -127,7 +129,9 @@ const DashboardPage: React.FC = () => {
               loading ? t('dashboard.welcome_back') : `${t('dashboard.welcome_back')}, ${user?.profile?.full_name ?? user?.name ?? t('dashboard.user')}`
             }</h1>
           </div>
-          <p className="text-foreground/70 max-w-2xl">{t('dashboard.overview')}</p>
+          <p className="text-foreground/70 max-w-2xl">
+            {isPartner ? t('dashboard.partnerOverview', { defaultValue: 'Manage your job listings and track candidate progress efficiently.' }) : t('dashboard.overview')}
+          </p>
         </div>
       </section>
 
@@ -148,20 +152,42 @@ const DashboardPage: React.FC = () => {
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className={isPartner ? "w-full" : "grid lg:grid-cols-3 gap-8"}>
           {/* Applications Section */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-foreground">{t('dashboard.my_applications')}</h2>
-              <Link href="/Jobs">
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-                  {t('dashboard.browse_more_jobs')}
-                </Button>
-              </Link>
-            </div>
+          <div className={isPartner ? "w-full" : "lg:col-span-2"}>
+            {!isPartner && (
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-foreground">{t('dashboard.my_applications')}</h2>
+                <Link href="/Jobs">
+                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+                    {t('dashboard.browse_more_jobs')}
+                  </Button>
+                </Link>
+              </div>
+            )}
 
             <div className="space-y-4">
-              {applications.map(app => (
+              {isPartner ? (
+                partnerApplicants.map(app => (
+                  <div key={app.id} className="rounded-2xl border border-border/80 bg-card/90 p-6 shadow-sm transition-all duration-300 hover:border-primary/25 hover:shadow-md">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-foreground">{app.user?.name ?? app.user?.profile?.full_name ?? t('partnerPage.applicant')}</h3>
+                        <p className="text-foreground/60 text-sm">{app.job?.title ?? ''}</p>
+                      </div>
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ml-4 bg-primary/10 text-primary">
+                        {app.workflow_status}
+                      </span>
+                    </div>
+                    <Link href="/Partner">
+                      <Button variant="outline" className="text-sm border-primary/20 hover:bg-primary/5 w-full">
+                        {t('partnerPage.viewDetails', { defaultValue: 'View Applicant Details' })}
+                      </Button>
+                    </Link>
+                  </div>
+                ))
+              ) : (
+                applications.map(app => (
                 <div key={app.id} className="rounded-2xl border border-border/80 bg-card/90 p-6 shadow-sm transition-all duration-300 hover:border-primary/25 hover:shadow-md">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
@@ -221,41 +247,46 @@ const DashboardPage: React.FC = () => {
                       )}
                     </div>
                   </div>
-                </div>
-              ))}
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
           {/* Quick Actions */}
-          <div className="space-y-8">
-            <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
-              <h3 className="text-xl font-bold text-foreground mb-6">{t('dashboard.quickActions')}</h3>
+          {!isPartner && (
+            <div className="space-y-8">
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
+                <h3 className="text-xl font-bold text-foreground mb-6">{t('dashboard.quickActions')}</h3>
 
-              <div className="space-y-3">
-                <Link href="/Jobs">
-                  <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-primary/5 hover:border-primary/20">
-                    <span className="mr-3">🔍</span> {t('dashboard.searchNewJobs')}
-                  </Button>
-                </Link>
+                <div className="space-y-3">
+                  {!isPartner && (
+                    <Link href="/Jobs">
+                      <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-primary/5 hover:border-primary/20">
+                        <span className="mr-3">🔍</span> {t('dashboard.searchNewJobs')}
+                      </Button>
+                    </Link>
+                  )}
 
-                <Link href="/Profile">
-                  <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-primary/5 hover:border-primary/20">
-                    <span className="mr-3">📝</span> {t('dashboard.updateProfile')}
-                  </Button>
-                </Link>
+                  <Link href="/Profile">
+                    <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-primary/5 hover:border-primary/20">
+                      <span className="mr-3">📝</span> {t('dashboard.updateProfile')}
+                    </Button>
+                  </Link>
 
-                <Link href="/Contact">
-                  <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-primary/5 hover:border-primary/20">
-                    <span className="mr-3">📞</span> {t('dashboard.contactSupport')}
-                  </Button>
-                </Link>
+                  <Link href="/Contact">
+                    <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-primary/5 hover:border-primary/20">
+                      <span className="mr-3">📞</span> {t('dashboard.contactSupport')}
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      <Footer />
+      <Footer hideSeekerSection={isPartner} />
     </main>
   )
 }

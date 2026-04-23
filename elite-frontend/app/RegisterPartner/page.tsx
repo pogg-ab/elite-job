@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Auth } from '@/lib/api'
 import { useTranslation } from 'react-i18next'
 import DocumentUpload from '@/components/DocumentUpload'
+import { isValidPhone, phoneValidationMessage, normalizeEthiopianPhone } from '@/lib/validation'
 
 export default function RegisterPartnerPage() {
   const { t } = useTranslation()
@@ -27,8 +28,10 @@ export default function RegisterPartnerPage() {
     company_email: '',
     company_phone: '',
     country: '',
+    otp: '',
   })
   const [licenseFile, setLicenseFile] = useState<File | null>(null)
+  const [showOtp, setShowOtp] = useState(false)
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [event.target.name]: event.target.value }))
@@ -51,38 +54,37 @@ export default function RegisterPartnerPage() {
     setIsSubmitting(true)
     try {
       // validate Ethiopian phone numbers
-      try {
-        const { isValidEthiopianPhone, phoneValidationMessage, normalizeEthiopianPhone } = await import('@/lib/validation')
-        if (!isValidEthiopianPhone(formData.phone)) {
-          const msg = phoneValidationMessage(formData.phone)
-          setPhoneError(msg)
-          setError(msg)
-          setIsSubmitting(false)
-          return
-        }
-        if (formData.company_phone && !isValidEthiopianPhone(formData.company_phone)) {
-          const msg = phoneValidationMessage(formData.company_phone)
-          setCompanyPhoneError(msg)
-          setError(msg)
-          setIsSubmitting(false)
-          return
-        }
-      } catch (err) {
-        // ignore validation import errors
+      // validate phone numbers (international for partners)
+      if (!isValidPhone(formData.phone)) {
+        const msg = phoneValidationMessage(formData.phone, false)
+        setPhoneError(msg)
+        setError(msg)
+        setIsSubmitting(false)
+        return
+      }
+      if (formData.company_phone && !isValidPhone(formData.company_phone)) {
+        const msg = phoneValidationMessage(formData.company_phone, false)
+        setCompanyPhoneError(msg)
+        setError(msg)
+        setIsSubmitting(false)
+        return
       }
 
       const body = new FormData()
       // normalize phones if validation util available
       let normalized = { ...formData }
-      try {
-        const { normalizeEthiopianPhone } = await import('@/lib/validation')
-        if (normalized.phone) normalized.phone = normalizeEthiopianPhone(normalized.phone)
-        if (normalized.company_phone) normalized.company_phone = normalizeEthiopianPhone(normalized.company_phone)
-      } catch {}
+      if (normalized.phone) normalized.phone = normalizeEthiopianPhone(normalized.phone)
+      if (normalized.company_phone) normalized.company_phone = normalizeEthiopianPhone(normalized.company_phone)
       Object.entries(normalized).forEach(([key, value]) => body.append(key, value))
       body.append('license_file', licenseFile)
 
-      await Auth.registerPartner(body)
+      const response = await Auth.registerPartner(body) as any
+
+      if (response.status === 'otp_required') {
+        setShowOtp(true)
+        setIsSubmitting(false)
+        return
+      }
 
       setSuccess(t('registerPartnerPage.submitSuccess'))
       // show success then redirect to Login so user can sign in once approved
@@ -97,6 +99,7 @@ export default function RegisterPartnerPage() {
         company_email: '',
         company_phone: '',
         country: '',
+        otp: '',
       })
       setLicenseFile(null)
     } catch (submitError) {
@@ -120,45 +123,83 @@ export default function RegisterPartnerPage() {
           {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
           {success && <p className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">{success}</p>}
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <input name="name" value={formData.name} onChange={handleChange} placeholder={t('registerPartnerPage.contactName')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
-            <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder={t('registerPartnerPage.contactEmail')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
-            <div>
-              <input name="phone" value={formData.phone} onChange={handleChange} placeholder={t('registerPartnerPage.phone') || '+2519XXXXXXXX'} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
-              {phoneError && <p className="mt-2 text-sm text-red-600">{phoneError}</p>}
-              {!phoneError && <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>}
-            </div>
-            <input name="country" value={formData.country} onChange={handleChange} placeholder={t('registerPartnerPage.country')} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
-          </div>
+          {!showOtp ? (
+            <>
+              <div className="grid md:grid-cols-2 gap-4">
+                <input name="name" value={formData.name} onChange={handleChange} placeholder={t('registerPartnerPage.contactName')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
+                <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder={t('registerPartnerPage.contactEmail')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
+                <div>
+                  <input name="phone" value={formData.phone} onChange={handleChange} placeholder={t('registerPartnerPage.phone') || 'Phone number'} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
+                  {phoneError && <p className="mt-2 text-sm text-red-600">{phoneError}</p>}
+                </div>
+                <input name="country" value={formData.country} onChange={handleChange} placeholder={t('registerPartnerPage.country')} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
+              </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <input name="company_name" value={formData.company_name} onChange={handleChange} placeholder={t('registerPartnerPage.companyName')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
-            <input type="email" name="company_email" value={formData.company_email} onChange={handleChange} placeholder={t('registerPartnerPage.companyEmail')} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
-            <div>
-              <input name="company_phone" value={formData.company_phone} onChange={handleChange} placeholder={t('registerPartnerPage.companyPhone') || '+2519XXXXXXXX'} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
-              {companyPhoneError && <p className="mt-2 text-sm text-red-600">{companyPhoneError}</p>}
-              {!companyPhoneError && <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>}
-            </div>
-            <div className="block rounded-lg border border-border bg-background px-4 py-3">
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-foreground/70">
-                {t('registerPartnerPage.uploadLicenseTitle', { defaultValue: 'Upload License Document' })}
-              </span>
-              <span className="mb-2 block text-xs text-foreground/60">
-                {t('registerPartnerPage.uploadLicenseHelp', { defaultValue: 'Attach your company license (PDF, JPG, PNG) for approval review.' })}
-              </span>
-              <div className="mt-2">
-                <DocumentUpload documentType="License" autoUpload={false} onUpload={(f) => setLicenseFile(f)} />
+              <div className="grid md:grid-cols-2 gap-4">
+                <input name="company_name" value={formData.company_name} onChange={handleChange} placeholder={t('registerPartnerPage.companyName')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
+                <input type="email" name="company_email" value={formData.company_email} onChange={handleChange} placeholder={t('registerPartnerPage.companyEmail')} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
+                <div>
+                  <input name="company_phone" value={formData.company_phone} onChange={handleChange} placeholder={t('registerPartnerPage.companyPhone') || 'Company Phone'} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
+                  {companyPhoneError && <p className="mt-2 text-sm text-red-600">{companyPhoneError}</p>}
+                </div>
+                <div className="block rounded-lg border border-border bg-background px-4 py-3">
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-foreground/70">
+                    {t('registerPartnerPage.uploadLicenseTitle', { defaultValue: 'Upload License Document' })}
+                  </span>
+                  <span className="mb-2 block text-xs text-foreground/60">
+                    {t('registerPartnerPage.uploadLicenseHelp', { defaultValue: 'Attach your company license (PDF, JPG, PNG) for approval review.' })}
+                  </span>
+                  <div className="mt-2">
+                    <DocumentUpload documentType="License" autoUpload={false} onUpload={(f) => setLicenseFile(f)} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder={t('registerPartnerPage.password')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
+                <input type="password" name="password_confirmation" value={formData.password_confirmation} onChange={handleChange} placeholder={t('registerPartnerPage.confirmPassword')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+            </>
+          ) : (
+            <div className="space-y-6 py-4">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-foreground">Verify Your Email</h2>
+                <p className="text-foreground/60 mt-2">
+                  We've sent a verification code to <span className="font-semibold text-primary">{formData.email}</span>.
+                  Please enter it below to complete your registration.
+                </p>
+              </div>
+
+              <div className="flex justify-center">
+                <input
+                  type="text"
+                  name="otp"
+                  value={formData.otp}
+                  onChange={handleChange}
+                  placeholder="000000"
+                  maxLength={6}
+                  className="w-64 text-center text-4xl tracking-[0.25em] font-mono px-6 py-4 border-2 border-primary/20 rounded-xl bg-background text-foreground focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all outline-none shadow-sm"
+                  required
+                />
+              </div>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtp(false)
+                    setError('')
+                  }}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Edit Registration Details
+                </button>
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder={t('registerPartnerPage.password')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
-            <input type="password" name="password_confirmation" value={formData.password_confirmation} onChange={handleChange} placeholder={t('registerPartnerPage.confirmPassword')} required className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground outline-none focus:ring-2 focus:ring-primary" />
-          </div>
-
-          <Button type="submit" disabled={isSubmitting} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-            {isSubmitting ? t('registerPartnerPage.submitting') : t('registerPartnerPage.submit')}
+          <Button type="submit" disabled={isSubmitting || (showOtp && (formData.otp?.length ?? 0) !== 6)} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+            {isSubmitting ? (showOtp ? 'Verifying...' : t('registerPartnerPage.submitting')) : (showOtp ? 'Verify & Submit' : t('registerPartnerPage.submit'))}
           </Button>
 
           <p className="text-center text-sm text-foreground/60">

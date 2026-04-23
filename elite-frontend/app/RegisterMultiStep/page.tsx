@@ -7,6 +7,7 @@ import Footer from '@/components/Footer'
 import { Button } from '@/components/ui/button'
 import { Auth, saveAuth, API_BASE_URL } from '@/lib/api'
 import { useTranslation } from 'react-i18next'
+import { isValidEthiopianPhone, phoneValidationMessage, normalizeEthiopianPhone } from '@/lib/validation'
 
 const RegisterMultiStep: React.FC = () => {
   const { t } = useTranslation()
@@ -37,7 +38,11 @@ const RegisterMultiStep: React.FC = () => {
     // Step 3
     agreeTerms: false,
     agreePrivacy: false,
+    // OTP
+    otp: '',
   })
+
+  const [showOtp, setShowOtp] = useState(false)
  
 
   const steps = [
@@ -55,6 +60,59 @@ const RegisterMultiStep: React.FC = () => {
     'Other'
   ]
 
+  const validateField = (name: string, value: any, latestData?: typeof formData) => {
+    const data = latestData || formData
+    let errorMsg = ''
+    switch (name) {
+      case 'fullName':
+        if (!value || !String(value).trim()) errorMsg = 'Full name is required'
+        break
+      case 'email':
+        if (!value || !String(value).trim()) errorMsg = 'Email is required'
+        else if (!validateEmail(value)) errorMsg = 'Invalid email'
+        break
+      case 'phone':
+        if (!value || !String(value).trim()) errorMsg = 'Phone is required'
+        else if (!isValidEthiopianPhone(value)) errorMsg = 'Invalid Ethiopian phone number'
+        break
+      case 'password':
+        if (!value) errorMsg = 'Password is required'
+        else if (String(value).length < 8) errorMsg = 'Password must be at least 8 characters'
+        break
+      case 'confirmPassword':
+        if (!value) errorMsg = 'Please confirm your password'
+        else if (value !== data.password) errorMsg = 'Passwords do not match'
+        break
+      case 'gender':
+        if (!value) errorMsg = 'Gender is required'
+        break
+      case 'age':
+        if (!value) errorMsg = 'Age is required'
+        else if (Number(value) < 18 || Number(value) > 65) errorMsg = 'Age must be between 18 and 65'
+        break
+      case 'educationLevel':
+        if (!value) errorMsg = 'Education level is required'
+        break
+      case 'experienceSummary':
+        if (!value || !String(value).trim()) errorMsg = 'Experience summary is required'
+        break
+      case 'passportStatus':
+        if (!value) errorMsg = 'Passport status is required'
+        break
+    }
+
+    setErrors(prev => ({
+      ...prev,
+      [name]: errorMsg
+    }))
+    return !errorMsg
+  }
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    validateField(name, value)
+  }
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as any
     
@@ -65,11 +123,27 @@ const RegisterMultiStep: React.FC = () => {
         [name]: checked
       })
     } else {
-      setFormData({
-        ...formData,
-        [name]: value
-      })
+      let updatedData = { ...formData, [name]: value }
+      
+      if (name === 'dateOfBirth' && value) {
+        const birthDate = new Date(value)
+        const today = new Date()
+        let age = today.getFullYear() - birthDate.getFullYear()
+        const m = today.getMonth() - birthDate.getMonth()
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          age--
+        }
+        updatedData.age = String(age)
+        validateField('age', String(age), updatedData)
+      }
+
+      setFormData(updatedData)
       if (name === 'phone') setPhoneError(null)
+      
+      // Clear error on change if it was previously set
+      if (errors[name]) {
+        validateField(name, value, updatedData)
+      }
     }
   }
 
@@ -135,20 +209,15 @@ const RegisterMultiStep: React.FC = () => {
 
       try {
         // validate phone before submit
-        try {
-          const { isValidEthiopianPhone, phoneValidationMessage, normalizeEthiopianPhone } = await import('@/lib/validation')
-          if (!isValidEthiopianPhone(formData.phone)) {
-            const msg = phoneValidationMessage(formData.phone)
-            setPhoneError(msg)
-            setError(msg)
-            setIsSubmitting(false)
-            return
-          }
-          // normalize for payload
-          formData.phone = normalizeEthiopianPhone(formData.phone)
-        } catch (err) {
-          // if validation util fails, continue without blocking
+        if (!isValidEthiopianPhone(formData.phone)) {
+          const msg = phoneValidationMessage(formData.phone)
+          setPhoneError(msg)
+          setError(msg)
+          setIsSubmitting(false)
+          return
         }
+        // normalize for payload
+        formData.phone = normalizeEthiopianPhone(formData.phone)
         const payload = {
           name: formData.fullName.trim(),
           email: formData.email,
@@ -174,7 +243,13 @@ const RegisterMultiStep: React.FC = () => {
           },
         }
 
-        const response = await Auth.register(payload)
+        const response = await Auth.register(payload) as any
+
+        if (response.status === 'otp_required') {
+          setShowOtp(true)
+          setIsSubmitting(false)
+          return
+        }
 
         const accessToken = response.auth?.access_token ?? response.token
         if (accessToken) {
@@ -201,28 +276,29 @@ const RegisterMultiStep: React.FC = () => {
   function validateStep(step: number) {
     const next: Record<string, string> = {}
     if (step === 1) {
-      if (!formData.fullName || !String(formData.fullName).trim()) next.fullName = t('registerPage.errors.fullNameRequired') || 'Full name is required'
-      if (!formData.email || !String(formData.email).trim()) next.email = t('registerPage.errors.emailRequired') || 'Email is required'
-      else if (!validateEmail(formData.email)) next.email = t('registerPage.errors.invalidEmail') || 'Enter a valid email address'
-      if (!formData.phone || !String(formData.phone).trim()) next.phone = t('registerPage.errors.phoneRequired') || 'Phone is required'
-      if (!formData.password) next.password = t('registerPage.errors.passwordRequired') || 'Password is required'
-      else if (String(formData.password).length < 8) next.password = t('registerPage.errors.passwordShort') || 'Password must be at least 8 characters'
-      if (!formData.confirmPassword) next.confirmPassword = t('registerPage.errors.confirmPasswordRequired') || 'Please confirm your password'
-      else if (formData.password !== formData.confirmPassword) next.confirmPassword = t('registerPage.errors.passwordMismatch') || 'Passwords do not match'
+      if (!formData.fullName || !String(formData.fullName).trim()) next.fullName = 'Full name is required'
+      if (!formData.email || !String(formData.email).trim()) next.email = 'Email is required'
+      else if (!validateEmail(formData.email)) next.email = 'Invalid email'
+      if (!formData.phone || !String(formData.phone).trim()) next.phone = 'Phone is required'
+      else if (!isValidEthiopianPhone(formData.phone)) next.phone = 'Invalid Ethiopian phone number'
+      if (!formData.password) next.password = 'Password is required'
+      else if (String(formData.password).length < 8) next.password = 'Password must be at least 8 characters'
+      if (!formData.confirmPassword) next.confirmPassword = 'Please confirm your password'
+      else if (formData.password !== formData.confirmPassword) next.confirmPassword = 'Passwords do not match'
     }
 
     if (step === 2) {
-      if (!formData.gender) next.gender = t('registerPage.errors.genderRequired') || 'Gender is required'
-      if (!formData.age) next.age = t('registerPage.errors.ageRequired') || 'Age is required'
-      else if (Number(formData.age) < 18 || Number(formData.age) > 65) next.age = t('registerPage.errors.ageRange') || 'Age must be between 18 and 65'
-      if (!formData.educationLevel) next.educationLevel = t('registerPage.errors.educationRequired') || 'Education level is required'
-      if (!formData.experienceSummary || !String(formData.experienceSummary).trim()) next.experienceSummary = t('registerPage.errors.experienceRequired') || 'Experience summary is required'
-      if (!formData.passportStatus) next.passportStatus = t('registerPage.errors.passportRequired') || 'Passport status is required'
+      if (!formData.gender) next.gender = 'Gender is required'
+      if (!formData.age) next.age = 'Age is required'
+      else if (Number(formData.age) < 18 || Number(formData.age) > 65) next.age = 'Age must be between 18 and 65'
+      if (!formData.educationLevel) next.educationLevel = 'Education level is required'
+      if (!formData.experienceSummary || !String(formData.experienceSummary).trim()) next.experienceSummary = 'Experience summary is required'
+      if (!formData.passportStatus) next.passportStatus = 'Passport status is required'
     }
 
     if (step === 3) {
-      if (requiredTerms && !formData.agreeTerms) next.agreeTerms = t('registerPage.errors.mustAgreeTerms') || 'You must agree to the terms'
-      if (requiredPrivacy && !formData.agreePrivacy) next.agreePrivacy = t('registerPage.errors.mustAgreePrivacy') || 'You must agree to the privacy policy'
+      if (requiredTerms && !formData.agreeTerms) next.agreeTerms = 'You must agree to the terms'
+      if (requiredPrivacy && !formData.agreePrivacy) next.agreePrivacy = 'You must agree to the privacy policy'
     }
 
     setErrors(next)
@@ -294,7 +370,7 @@ const RegisterMultiStep: React.FC = () => {
           )}
 
           {/* Step 1: Registration */}
-          {currentStep === 1 && (
+          {currentStep === 1 && !showOtp && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-foreground mb-6">{steps[0].title}</h2>
 
@@ -308,6 +384,7 @@ const RegisterMultiStep: React.FC = () => {
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   placeholder={t('registerPage.yourFullName')}
                   className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.fullName ? 'border-red-400' : 'border-border'}`}
                 />
@@ -324,6 +401,7 @@ const RegisterMultiStep: React.FC = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   placeholder="you@example.com"
                   className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.email ? 'border-red-400' : 'border-border'}`}
                 />
@@ -340,12 +418,12 @@ const RegisterMultiStep: React.FC = () => {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   placeholder="+2519XXXXXXXX"
                   className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.phone ? 'border-red-400' : 'border-border'}`}
                 />
                 {errors.phone && <p className="mt-2 text-sm text-red-600">{errors.phone}</p>}
-                {!errors.phone && phoneError && <p className="mt-2 text-sm text-red-600">{phoneError}</p>}
-                {!errors.phone && !phoneError && <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>}
+                {!errors.phone && <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>}
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
@@ -359,6 +437,7 @@ const RegisterMultiStep: React.FC = () => {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder={t('registerPage.createStrongPassword')}
                     className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.password ? 'border-red-400' : 'border-border'}`}
                   />
@@ -374,6 +453,7 @@ const RegisterMultiStep: React.FC = () => {
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder={t('registerPage.confirmYourPassword')}
                     className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.confirmPassword ? 'border-red-400' : 'border-border'}`}
                   />
@@ -384,7 +464,7 @@ const RegisterMultiStep: React.FC = () => {
           )}
 
           {/* Step 2: Profile Details */}
-          {currentStep === 2 && (
+          {currentStep === 2 && !showOtp && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-foreground mb-6">{steps[1].title}</h2>
 
@@ -398,12 +478,12 @@ const RegisterMultiStep: React.FC = () => {
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.gender ? 'border-red-400' : 'border-border'}`}
                 >
                   <option value="">{t('registerPage.selectGender')}</option>
                   <option value="male">{t('registerPage.male')}</option>
                   <option value="female">{t('registerPage.female')}</option>
-                  <option value="other">{t('registerPage.other')}</option>
                 </select>
                 {errors.gender && <p className="mt-2 text-sm text-red-600">{errors.gender}</p>}
                 </div>
@@ -418,6 +498,7 @@ const RegisterMultiStep: React.FC = () => {
                     max={65}
                     value={formData.age}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="18 - 65"
                       className={`w-full px-4 py-3 border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none ${errors.age ? 'border-red-400' : 'border-border'}`}
                   />
@@ -434,6 +515,7 @@ const RegisterMultiStep: React.FC = () => {
                     name="dateOfBirth"
                     value={formData.dateOfBirth}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
                   />
                 </div>
@@ -446,6 +528,7 @@ const RegisterMultiStep: React.FC = () => {
                     name="nationality"
                     value={formData.nationality}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Ethiopian"
                     className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
                   />
@@ -459,6 +542,7 @@ const RegisterMultiStep: React.FC = () => {
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   placeholder="City, sub-city, kebele..."
                   rows={2}
                   className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none resize-none"
@@ -467,7 +551,7 @@ const RegisterMultiStep: React.FC = () => {
 
               <div>
                 <label htmlFor="educationLevel" className="block text-sm font-semibold text-foreground mb-2">{t('registerPage.education')}</label>
-                <select id="educationLevel" name="educationLevel" value={formData.educationLevel} onChange={handleChange} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none">
+                <select id="educationLevel" name="educationLevel" value={formData.educationLevel} onChange={handleChange} onBlur={handleBlur} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none">
                   <option value="">{t('registerPage.selectEducation')}</option>
                   {educationLevels.map(e => <option key={e} value={e}>{e}</option>)}
                 </select>
@@ -476,7 +560,7 @@ const RegisterMultiStep: React.FC = () => {
 
               <div>
                 <label htmlFor="experienceSummary" className="block text-sm font-semibold text-foreground mb-2">{t('registerPage.experience')}</label>
-                <textarea id="experienceSummary" name="experienceSummary" value={formData.experienceSummary} onChange={handleChange} placeholder={t('registerPage.experiencePlaceholder')} rows={4} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none resize-none" />
+                <textarea id="experienceSummary" name="experienceSummary" value={formData.experienceSummary} onChange={handleChange} onBlur={handleBlur} placeholder={t('registerPage.experiencePlaceholder')} rows={4} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none resize-none" />
                 {errors.experienceSummary && <p className="mt-2 text-sm text-red-600">{errors.experienceSummary}</p>}
               </div>
 
@@ -489,6 +573,7 @@ const RegisterMultiStep: React.FC = () => {
                     name="preferredCountry"
                     value={formData.preferredCountry}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="UAE, Saudi Arabia..."
                     className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
                   />
@@ -502,6 +587,7 @@ const RegisterMultiStep: React.FC = () => {
                     name="skills"
                     value={formData.skills}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="Cooking, Driving, Welding"
                     className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-foreground/40 focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none"
                   />
@@ -510,7 +596,7 @@ const RegisterMultiStep: React.FC = () => {
 
               <div>
                 <label htmlFor="passportStatus" className="block text-sm font-semibold text-foreground mb-2">{t('registerPage.passportStatus')}</label>
-                <select id="passportStatus" name="passportStatus" value={formData.passportStatus} onChange={handleChange} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none">
+                <select id="passportStatus" name="passportStatus" value={formData.passportStatus} onChange={handleChange} onBlur={handleBlur} className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition outline-none">
                   <option value="">{t('registerPage.selectPassportStatus')}</option>
                   <option value="valid">{t('registerPage.validPassport')}</option>
                   <option value="expired">{t('registerPage.expiredPassport')}</option>
@@ -535,7 +621,7 @@ const RegisterMultiStep: React.FC = () => {
           )}
 
           {/* Step 3: Agreement */}
-          {currentStep === 3 && (
+          {currentStep === 3 && !showOtp && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-foreground mb-6">{steps[2].title}</h2>
 
@@ -600,9 +686,48 @@ const RegisterMultiStep: React.FC = () => {
             </div>
           )}
 
+          {/* Step 4: OTP Verification */}
+          {showOtp && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-foreground">Verify Your Email</h2>
+                <p className="text-foreground/60 mt-2">
+                  We've sent a 6-digit verification code to <span className="font-semibold text-primary">{formData.email}</span>.
+                  Please enter it below to complete your registration.
+                </p>
+              </div>
+
+              <div className="flex justify-center">
+                <input
+                  type="text"
+                  name="otp"
+                  value={formData.otp}
+                  onChange={handleChange}
+                  placeholder="000000"
+                  maxLength={6}
+                  className="w-64 text-center text-4xl tracking-[0.25em] font-mono px-6 py-4 border-2 border-primary/20 rounded-xl bg-background text-foreground focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all outline-none shadow-sm"
+                  required
+                />
+              </div>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtp(false)
+                    setError('')
+                  }}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Edit Email Address
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Navigation Buttons */}
           <div className="flex gap-3 mt-8 pt-6 border-t border-border">
-            {currentStep > 1 && (
+            {!showOtp && currentStep > 1 && (
               <Button
                 type="button"
                 variant="outline"
@@ -615,9 +740,15 @@ const RegisterMultiStep: React.FC = () => {
             <Button
               type="submit"
               className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold disabled:opacity-50 disabled:cursor-not-allowed h-11"
-              disabled={isSubmitting}
+              disabled={isSubmitting || (showOtp && (formData.otp?.length ?? 0) !== 6)}
             >
-              {isSubmitting ? t('registerPage.creatingAccount') : currentStep === 3 ? t('registerPage.createAccount') : t('registerPage.continue')}
+              {isSubmitting
+                ? t('registerPage.creatingAccount')
+                : showOtp
+                ? 'Verify & Create Account'
+                : currentStep === 3
+                ? t('registerPage.createAccount')
+                : t('registerPage.continue')}
             </Button>
           </div>
         </form>

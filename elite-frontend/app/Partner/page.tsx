@@ -242,7 +242,7 @@ const PartnerPage: React.FC = () => {
           </div>
         </div>
       </SimpleModal>
-      <Footer />
+      <Footer hideSeekerSection={true} />
     </main>
   )
 }

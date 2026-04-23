@@ -8,6 +8,7 @@ import { Profile as ProfileApi, Documents, downloadFile, Auth } from '@/lib/api'
 import DocumentUpload from '@/components/DocumentUpload'
 import { calculateProfileCompletion } from '@/lib/profileCompletion'
 import { useTranslation } from 'react-i18next'
+import { isValidEthiopianPhone, isValidPhone, phoneValidationMessage, normalizeEthiopianPhone } from '@/lib/validation'
 
 const inputClass = 'w-full rounded-xl border border-border/70 bg-background/80 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20'
 const labelClass = 'text-xs font-semibold uppercase tracking-wide text-foreground/60 mb-1.5'
@@ -21,6 +22,7 @@ const ProfilePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [phoneError, setPhoneError] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const [uploadFiles, setUploadFiles] = useState<Record<string, File | null>>(() => ({
     'Passport Copy': null,
@@ -68,6 +70,50 @@ const ProfilePage: React.FC = () => {
     }
   }, [t])
 
+  const validateField = (name: string, value: any) => {
+    let errorMsg = ''
+    switch (name) {
+      case 'name':
+      case 'full_name':
+        if (!value || !String(value).trim()) errorMsg = 'Full name is required'
+        break
+      case 'phone':
+        if (!value || !String(value).trim()) errorMsg = 'Phone is required'
+        else {
+          const isValid = isPartner ? isValidPhone(value) : isValidEthiopianPhone(value)
+          if (!isValid) errorMsg = isPartner ? 'Invalid phone number' : 'Invalid Ethiopian phone number'
+        }
+        break
+      case 'gender':
+        if (!value) errorMsg = 'Gender is required'
+        break
+      case 'age':
+        if (!value) errorMsg = 'Age is required'
+        else if (Number(value) < 18 || Number(value) > 65) errorMsg = 'Age must be between 18 and 65'
+        break
+      case 'education_level':
+        if (!value) errorMsg = 'Education level is required'
+        break
+      case 'experience_summary':
+        if (!value || !String(value).trim()) errorMsg = 'Experience summary is required'
+        break
+      case 'passport_status':
+        if (!value) errorMsg = 'Passport status is required'
+        break
+    }
+
+    setErrors(prev => ({
+      ...prev,
+      [name]: errorMsg
+    }))
+    return !errorMsg
+  }
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    validateField(name, value)
+  }
+
   const handleSave = async () => {
     if (!profile) return
 
@@ -75,23 +121,19 @@ const ProfilePage: React.FC = () => {
     setError(null)
     try {
       // validate phone fields
-      try {
-        const { isValidEthiopianPhone, phoneValidationMessage, normalizeEthiopianPhone } = await import('@/lib/validation')
-        if (profile.phone && !isValidEthiopianPhone(profile.phone)) {
-          const msg = phoneValidationMessage(profile.phone)
-          setPhoneError(msg)
-          setError(msg)
-          setSaving(false)
-          return
-        }
-        if (agency?.company_phone && !isValidEthiopianPhone(agency.company_phone)) {
-          const msg = phoneValidationMessage(agency.company_phone)
-          setError(msg)
-          setSaving(false)
-          return
-        }
-      } catch (err) {
-        // ignore validation utility errors
+      const isPhoneValid = isPartner ? isValidPhone(profile.phone) : isValidEthiopianPhone(profile.phone)
+      if (profile.phone && !isPhoneValid) {
+        const msg = phoneValidationMessage(profile.phone, !isPartner)
+        setPhoneError(msg)
+        setError(msg)
+        setSaving(false)
+        return
+      }
+      if (agency?.company_phone && !isValidPhone(agency.company_phone)) {
+        const msg = phoneValidationMessage(agency.company_phone, false)
+        setError(msg)
+        setSaving(false)
+        return
       }
       const payload: any = {
         name: profile.name,
@@ -123,11 +165,8 @@ const ProfilePage: React.FC = () => {
       }
 
       // normalize phone values if possible
-      try {
-        const { normalizeEthiopianPhone } = await import('@/lib/validation')
-        if (payload.phone) payload.phone = normalizeEthiopianPhone(payload.phone)
-        if (payload.foreign_agency?.company_phone) payload.foreign_agency.company_phone = normalizeEthiopianPhone(payload.foreign_agency.company_phone)
-      } catch {}
+      if (payload.phone) payload.phone = normalizeEthiopianPhone(payload.phone)
+      if (payload.foreign_agency?.company_phone) payload.foreign_agency.company_phone = normalizeEthiopianPhone(payload.foreign_agency.company_phone)
 
       const saveResult: any = await ProfileApi.update(payload)
       const refreshed: any = saveResult?.user ?? (await ProfileApi.get())
@@ -323,14 +362,16 @@ const ProfilePage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <label className="flex flex-col">
                         <span className={labelClass}>{t('profilePage.name')}</span>
-                        <input value={profile.name ?? ''} onChange={(e) => setProfile({ ...profile, name: e.target.value })} className={inputClass} />
+                        <input name="name" value={profile.name ?? ''} onBlur={handleBlur} onChange={(e) => { setProfile({ ...profile, name: e.target.value }); if (errors.name) validateField('name', e.target.value) }} className={inputClass} />
+                        {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
                       </label>
 
                       <label className="flex flex-col">
                         <span className={labelClass}>{t('profilePage.phone')}</span>
-                          <input placeholder="+2519XXXXXXXX" value={profile.phone ?? ''} onChange={(e) => { setProfile({ ...profile, phone: e.target.value }); setPhoneError(null) }} className={inputClass} />
-                          {phoneError && <p className="mt-2 text-sm text-red-600">{phoneError}</p>}
-                          {!phoneError && <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>}
+                        <input name="phone" placeholder="+2519XXXXXXXX" value={profile.phone ?? ''} onBlur={handleBlur} onChange={(e) => { setProfile({ ...profile, phone: e.target.value }); setPhoneError(null); if (errors.phone) validateField('phone', e.target.value) }} className={inputClass} />
+                        {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
+                        {!errors.phone && phoneError && <p className="mt-2 text-sm text-red-600">{phoneError}</p>}
+                        {!errors.phone && !phoneError && <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>}
                       </label>
 
                       <label className="flex flex-col">
@@ -351,93 +392,144 @@ const ProfilePage: React.FC = () => {
                   </div>
 
                   {!isPartner && (
-                  <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-foreground/60 mb-3">{t('profilePage.personalDetails')}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <label className="flex flex-col md:col-span-2">
-                        <span className={labelClass}>{t('profilePage.fullName')}</span>
-                        <input value={profile.profile?.full_name ?? ''} onChange={(e) => setProfile({ ...profile, profile: { ...profile.profile, full_name: e.target.value } })} className={inputClass} />
-                      </label>
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-foreground/60 mb-3">{t('profilePage.personalDetails')}</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label className="flex flex-col md:col-span-2">
+                          <span className={labelClass}>{t('profilePage.fullName')}</span>
+                          <input name="full_name" value={profile.profile?.full_name ?? ''} onBlur={handleBlur} onChange={(e) => { setProfile({ ...profile, profile: { ...profile.profile, full_name: e.target.value } }); if (errors.full_name) validateField('full_name', e.target.value) }} className={inputClass} />
+                          {errors.full_name && <p className="mt-1 text-xs text-red-600">{errors.full_name}</p>}
+                        </label>
 
-                      <label className="flex flex-col">
-                        <span className={labelClass}>{t('profilePage.gender')}</span>
-                        <input value={profile.profile?.gender ?? ''} onChange={(e) => setProfile({ ...profile, profile: { ...profile.profile, gender: e.target.value } })} className={inputClass} />
-                      </label>
+                        <label className="flex flex-col">
+                          <span className={labelClass}>{t('profilePage.gender')}</span>
+                          <select
+                            name="gender"
+                            value={profile.profile?.gender ?? ''}
+                            onBlur={handleBlur}
+                            onChange={(e) => { setProfile({ ...profile, profile: { ...profile.profile, gender: e.target.value } }); validateField('gender', e.target.value) }}
+                            className={inputClass}
+                          >
+                            <option value="">{t('profilePage.selectGender')}</option>
+                            <option value="male">{t('registerPage.male') || 'Male'}</option>
+                            <option value="female">{t('registerPage.female') || 'Female'}</option>
 
-                      <label className="flex flex-col">
-                        <span className={labelClass}>{t('profilePage.dateOfBirth')}</span>
-                        <input type="date" value={profile.profile?.date_of_birth ?? ''} onChange={(e) => setProfile({ ...profile, profile: { ...profile.profile, date_of_birth: e.target.value } })} className={inputClass} />
-                      </label>
+                          </select>
+                          {errors.gender && <p className="mt-1 text-xs text-red-600">{errors.gender}</p>}
+                        </label>
 
-                      <label className="flex flex-col">
-                        <span className={labelClass}>{t('profilePage.nationality')}</span>
-                        <input value={profile.profile?.nationality ?? ''} onChange={(e) => setProfile({ ...profile, profile: { ...profile.profile, nationality: e.target.value } })} className={inputClass} />
-                      </label>
+                        <label className="flex flex-col">
+                          <span className={labelClass}>{t('profilePage.dateOfBirth')}</span>
+                          <input
+                            type="date"
+                            value={profile.profile?.date_of_birth ? String(profile.profile.date_of_birth).split('T')[0].split(' ')[0] : ''}
+                            onChange={(e) => {
+                              const dob = e.target.value
+                              const birthDate = new Date(dob)
+                              const today = new Date()
+                              let age = today.getFullYear() - birthDate.getFullYear()
+                              const m = today.getMonth() - birthDate.getMonth()
+                              if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                                age--
+                              }
+                              setProfile({
+                                ...profile,
+                                profile: {
+                                  ...profile.profile,
+                                  date_of_birth: dob,
+                                  age: dob ? age : profile.profile?.age
+                                }
+                              })
+                            }}
+                            className={inputClass}
+                          />
+                        </label>
 
-                      <label className="flex flex-col md:col-span-2">
-                        <span className={labelClass}>{t('profilePage.address')}</span>
-                        <textarea value={profile.profile?.address ?? ''} onChange={(e) => setProfile({ ...profile, profile: { ...profile.profile, address: e.target.value } })} className={inputClass} rows={2} />
-                      </label>
+                        <label className="flex flex-col">
+                          <span className={labelClass}>{t('profilePage.nationality')}</span>
+                          <input value={profile.profile?.nationality ?? ''} onChange={(e) => setProfile({ ...profile, profile: { ...profile.profile, nationality: e.target.value } })} className={inputClass} />
+                        </label>
 
-                      <label className="flex flex-col">
-                        <span className={labelClass}>{t('profilePage.passportStatus')}</span>
-                        <select value={profile.profile?.passport_status ?? ''} onChange={(e) => setProfile({ ...profile, profile: { ...profile.profile, passport_status: e.target.value } })} className={inputClass}>
-                          <option value="">{t('profilePage.selectStatus')}</option>
-                          <option value="valid">{t('profilePage.validPassport')}</option>
-                          <option value="expired">{t('profilePage.expiredPassport')}</option>
-                          <option value="applied">{t('profilePage.appliedPassport')}</option>
-                          <option value="none">{t('profilePage.noPassport')}</option>
-                        </select>
-                      </label>
+                        <label className="flex flex-col md:col-span-2">
+                          <span className={labelClass}>{t('profilePage.address')}</span>
+                          <textarea name="address" value={profile.profile?.address ?? ''} onBlur={handleBlur} onChange={(e) => { setProfile({ ...profile, profile: { ...profile.profile, address: e.target.value } }); if (errors.address) validateField('address', e.target.value) }} className={inputClass} rows={2} />
+                          {errors.address && <p className="mt-1 text-xs text-red-600">{errors.address}</p>}
+                        </label>
 
-                      <label className="flex flex-col">
-                        <span className={labelClass}>{t('profilePage.age')}</span>
-                        <input type="number" min={18} max={65} value={profile.profile?.age ?? ''} onChange={(e) => setProfile({ ...profile, profile: { ...profile.profile, age: e.target.value } })} className={inputClass} />
-                      </label>
+                        <label className="flex flex-col">
+                          <span className={labelClass}>{t('profilePage.passportStatus')}</span>
+                          <select name="passport_status" value={profile.profile?.passport_status ?? ''} onBlur={handleBlur} onChange={(e) => { setProfile({ ...profile, profile: { ...profile.profile, passport_status: e.target.value } }); validateField('passport_status', e.target.value) }} className={inputClass}>
+                            <option value="">{t('profilePage.selectStatus')}</option>
+                            <option value="valid">{t('profilePage.validPassport')}</option>
+                            <option value="expired">{t('profilePage.expiredPassport')}</option>
+                            <option value="applied">{t('profilePage.appliedPassport')}</option>
+                            <option value="none">{t('profilePage.noPassport')}</option>
+                          </select>
+                          {errors.passport_status && <p className="mt-1 text-xs text-red-600">{errors.passport_status}</p>}
+                        </label>
+
+                        <label className="flex flex-col">
+                          <span className={labelClass}>{t('profilePage.age')}</span>
+                          <input name="age" type="number" min={18} max={65} value={profile.profile?.age ?? ''} onBlur={handleBlur} onChange={(e) => { setProfile({ ...profile, profile: { ...profile.profile, age: e.target.value } }); if (errors.age) validateField('age', e.target.value) }} className={inputClass} />
+                          {errors.age && <p className="mt-1 text-xs text-red-600">{errors.age}</p>}
+                        </label>
+                      </div>
                     </div>
-                  </div>
                   )}
 
                   {!isPartner && (
-                  <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-foreground/60 mb-3">{t('profilePage.professionalDetails')}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <label className="flex flex-col">
-                        <span className={labelClass}>{t('profilePage.education')}</span>
-                        <input value={profile.profile?.education_level ?? ''} onChange={(e) => setProfile({ ...profile, profile: { ...profile.profile, education_level: e.target.value } })} className={inputClass} />
-                      </label>
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-foreground/60 mb-3">{t('profilePage.professionalDetails')}</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label className="flex flex-col">
+                          <span className={labelClass}>{t('profilePage.education')}</span>
+                          <select
+                            name="education_level"
+                            value={profile.profile?.education_level ?? ''}
+                            onBlur={handleBlur}
+                            onChange={(e) => { setProfile({ ...profile, profile: { ...profile.profile, education_level: e.target.value } }); validateField('education_level', e.target.value) }}
+                            className={inputClass}
+                          >
+                            <option value="">{t('profilePage.selectEducation')}</option>
+                            {['No Formal Education', 'Primary School', 'Secondary School', 'Vocational Training', 'Diploma', "Bachelor's Degree", "Master's Degree", 'PhD'].map(e => (
+                              <option key={e} value={e}>{e}</option>
+                            ))}
+                          </select>
+                          {errors.education_level && <p className="mt-1 text-xs text-red-600">{errors.education_level}</p>}
+                        </label>
 
-                      <label className="flex flex-col">
-                        <span className={labelClass}>{t('profilePage.preferredCountry')}</span>
-                        <select value={profile.profile?.preferred_country ?? ''} onChange={(e) => setProfile({ ...profile, profile: { ...profile.profile, preferred_country: e.target.value } })} className={inputClass}>
-                          <option value="">Select country</option>
-                          {COUNTRY_OPTIONS.map((country) => (
-                            <option key={country} value={country}>{country}</option>
-                          ))}
-                        </select>
-                      </label>
+                        <label className="flex flex-col">
+                          <span className={labelClass}>{t('profilePage.preferredCountry')}</span>
+                          <select value={profile.profile?.preferred_country ?? ''} onChange={(e) => setProfile({ ...profile, profile: { ...profile.profile, preferred_country: e.target.value } })} className={inputClass}>
+                            <option value="">Select country</option>
+                            {COUNTRY_OPTIONS.map((country) => (
+                              <option key={country} value={country}>{country}</option>
+                            ))}
+                          </select>
+                        </label>
 
-                      <label className="flex flex-col md:col-span-2">
-                        <span className={labelClass}>{t('profilePage.workExperience')}</span>
-                        <textarea value={profile.profile?.experience_summary ?? ''} onChange={(e) => setProfile({ ...profile, profile: { ...profile.profile, experience_summary: e.target.value } })} className={inputClass} rows={3} />
-                      </label>
+                        <label className="flex flex-col md:col-span-2">
+                          <span className={labelClass}>{t('profilePage.workExperience')}</span>
+                          <textarea name="experience_summary" value={profile.profile?.experience_summary ?? ''} onBlur={handleBlur} onChange={(e) => { setProfile({ ...profile, profile: { ...profile.profile, experience_summary: e.target.value } }); if (errors.experience_summary) validateField('experience_summary', e.target.value) }} className={inputClass} rows={3} />
+                          {errors.experience_summary && <p className="mt-1 text-xs text-red-600">{errors.experience_summary}</p>}
+                        </label>
 
-                      <label className="flex flex-col md:col-span-2">
-                        <span className={labelClass}>{t('profilePage.skills')}</span>
-                        <input
-                          value={Array.isArray(profile.profile?.skills) ? profile.profile.skills.join(', ') : ''}
-                          onChange={(e) => setProfile({
-                            ...profile,
-                            profile: {
-                              ...profile.profile,
-                              skills: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean),
-                            },
-                          })}
-                          className={inputClass}
-                        />
-                      </label>
+                        <label className="flex flex-col md:col-span-2">
+                          <span className={labelClass}>{t('profilePage.skills')}</span>
+                          <input
+                            value={Array.isArray(profile.profile?.skills) ? profile.profile.skills.join(', ') : ''}
+                            onChange={(e) => setProfile({
+                              ...profile,
+                              profile: {
+                                ...profile.profile,
+                                skills: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean),
+                              },
+                            })}
+                            className={inputClass}
+                          />
+                        </label>
+                      </div>
                     </div>
-                  </div>
                   )}
 
                   {isPartner && (
@@ -465,13 +557,13 @@ const ProfilePage: React.FC = () => {
 
                         <label className="flex flex-col">
                           <span className={labelClass}>{t('profilePage.companyPhone', { defaultValue: 'Company Phone' })}</span>
-                            <input
-                              placeholder="+2519XXXXXXXX"
-                              value={agency?.company_phone ?? ''}
-                              onChange={(e) => setProfile({ ...profile, foreign_agency: { ...(agency ?? {}), company_phone: e.target.value } })}
-                              className={inputClass}
-                            />
-                            <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>
+                          <input
+                            placeholder="+2519XXXXXXXX"
+                            value={agency?.company_phone ?? ''}
+                            onChange={(e) => setProfile({ ...profile, foreign_agency: { ...(agency ?? {}), company_phone: e.target.value } })}
+                            className={inputClass}
+                          />
+                          <p className="mt-2 text-sm text-foreground/60">+2519XXXXXXXX</p>
                         </label>
 
                         <label className="flex flex-col">
@@ -504,74 +596,74 @@ const ProfilePage: React.FC = () => {
               </section>
 
               {!isPartner && (
-              <section className="rounded-3xl border border-border/70 bg-card/80 backdrop-blur p-6 md:p-8 shadow-sm">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-                  <div>
-                    <h2 className="text-xl md:text-2xl font-bold text-foreground">{t('profilePage.documents')}</h2>
-                    <p className="text-sm text-foreground/65 mt-1">{t('profilePage.requiredDocs')}</p>
+                <section className="rounded-3xl border border-border/70 bg-card/80 backdrop-blur p-6 md:p-8 shadow-sm">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                    <div>
+                      <h2 className="text-xl md:text-2xl font-bold text-foreground">{t('profilePage.documents')}</h2>
+                      <p className="text-sm text-foreground/65 mt-1">{t('profilePage.requiredDocs')}</p>
+                    </div>
+                    <span className="rounded-full border border-border px-3 py-1 text-xs text-foreground/60">{t('profilePage.allowed')}</span>
                   </div>
-                  <span className="rounded-full border border-border px-3 py-1 text-xs text-foreground/60">{t('profilePage.allowed')}</span>
-                </div>
 
-                <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {DOCUMENT_TYPES.map((type) => {
-                    const isUploading = uploadingType === type
-                    const existing = documents.find((d: any) => d.document_type === type)
+                  <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {DOCUMENT_TYPES.map((type) => {
+                      const isUploading = uploadingType === type
+                      const existing = documents.find((d: any) => d.document_type === type)
 
-                    return (
-                      <div key={type} className="rounded-2xl border border-border/70 bg-background/70 p-4">
-                        <div className="mb-3 flex items-center justify-between gap-2">
-                          <p className="text-sm font-semibold text-foreground">{type}</p>
-                          {existing && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">Uploaded</span>}
+                      return (
+                        <div key={type} className="rounded-2xl border border-border/70 bg-background/70 p-4">
+                          <div className="mb-3 flex items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-foreground">{type}</p>
+                            {existing && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">Uploaded</span>}
+                          </div>
+                          <div className="mt-2">
+                            <DocumentUpload documentType={type} onUpload={async () => {
+                              setUploadingType(type)
+                              setError(null)
+                              try {
+                                const refreshed = await ProfileApi.get()
+                                setProfile(refreshed)
+                                setUploadFiles((prev) => ({ ...prev, [type]: null }))
+                              } catch (err: any) {
+                                setError(err?.message ?? t('profilePage.uploadFailed'))
+                              } finally {
+                                setUploadingType(null)
+                              }
+                            }} />
+                          </div>
                         </div>
-                        <div className="mt-2">
-                          <DocumentUpload documentType={type} onUpload={async () => {
-                            setUploadingType(type)
-                            setError(null)
-                            try {
-                              const refreshed = await ProfileApi.get()
-                              setProfile(refreshed)
-                              setUploadFiles((prev) => ({ ...prev, [type]: null }))
-                            } catch (err: any) {
-                              setError(err?.message ?? t('profilePage.uploadFailed'))
-                            } finally {
-                              setUploadingType(null)
-                            }
-                          }} />
+                      )
+                    })}
+                  </div>
+
+                  <div className="space-y-3">
+                    {documents.length === 0 && (
+                      <div className="rounded-xl border border-dashed border-border px-4 py-5 text-sm text-foreground/60 text-center">
+                        {t('profilePage.noDocsUploaded')}
+                      </div>
+                    )}
+
+                    {documents.map((d: any) => (
+                      <div key={d.id} className="rounded-2xl border border-border bg-background/80 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-foreground">{d.document_type}</p>
+                          <p className="text-xs text-foreground/60">{t('profilePage.uploadedReady')}</p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select value={d.document_type} onChange={(e) => handleUpdateType(d.id, e.target.value)} className="rounded-lg border border-border/70 bg-background px-2.5 py-2 text-sm">
+                            <option value="Passport Copy">Passport Copy</option>
+                            <option value="Certificates">Certificates</option>
+                            <option value="Training Documents">Training Documents</option>
+                            <option value="Profile Photo">Profile Photo</option>
+                          </select>
+                          <Button onClick={() => handleDownload(d.id)} className="bg-primary hover:bg-primary/90">{t('profilePage.view')}</Button>
+                          <Button onClick={() => handleDelete(d.id)} variant="outline">{t('profilePage.delete')}</Button>
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
-
-                <div className="space-y-3">
-                  {documents.length === 0 && (
-                    <div className="rounded-xl border border-dashed border-border px-4 py-5 text-sm text-foreground/60 text-center">
-                      {t('profilePage.noDocsUploaded')}
-                    </div>
-                  )}
-
-                  {documents.map((d: any) => (
-                    <div key={d.id} className="rounded-2xl border border-border bg-background/80 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-foreground">{d.document_type}</p>
-                        <p className="text-xs text-foreground/60">{t('profilePage.uploadedReady')}</p>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        <select value={d.document_type} onChange={(e) => handleUpdateType(d.id, e.target.value)} className="rounded-lg border border-border/70 bg-background px-2.5 py-2 text-sm">
-                          <option value="Passport Copy">Passport Copy</option>
-                          <option value="Certificates">Certificates</option>
-                          <option value="Training Documents">Training Documents</option>
-                          <option value="Profile Photo">Profile Photo</option>
-                        </select>
-                        <Button onClick={() => handleDownload(d.id)} className="bg-primary hover:bg-primary/90">{t('profilePage.view')}</Button>
-                        <Button onClick={() => handleDelete(d.id)} variant="outline">{t('profilePage.delete')}</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+                    ))}
+                  </div>
+                </section>
               )}
             </div>
           )}

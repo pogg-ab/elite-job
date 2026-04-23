@@ -33,6 +33,7 @@ const Navbar: React.FC = () => {
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [isPartnerUser, setIsPartnerUser] = useState<boolean>(false)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false)
   const [servicesList, setServicesList] = useState<any[]>([])
 
   useEffect(() => {
@@ -49,11 +50,13 @@ const Navbar: React.FC = () => {
             const role = me?.user?.role ?? me?.role ?? null
             if (!mounted) return
             setIsPartnerUser(role === 'partner' || role === 'agency')
+            setIsAdmin(role === 'admin' || role === 'superadmin' || me?.user?.is_admin || me?.is_admin)
           } catch {
             // on failure (401/invalid token) clear auth state
             try { clearAuth() } catch {}
             setIsAuthenticated(false)
             setIsPartnerUser(false)
+            setIsAdmin(false)
           }
         })()
 
@@ -153,8 +156,8 @@ const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 md:h-20">
           <Link href="/" className="flex items-center gap-2">
-            <img src="/logo.jpeg" alt="Elite" className="w-10 h-10 object-contain rounded-md border border-white/20" />
-            <span className="font-bold text-xl text-white hidden sm:inline">Elite</span>
+            <img src="/logo.PNG" alt="Elite" className="h-[52px] w-auto object-contain" />
+            <span className="font-bold text-2xl text-white hidden sm:inline">Elite</span>
           </Link>
 
 
@@ -285,9 +288,11 @@ const Navbar: React.FC = () => {
                       {label}
                     </Button>
                   </Link>
-                  {link.href === '/Jobs' && isPartnerUser && (
-                    <Link href="/Partner">
-                      <Button variant="ghost" className="w-full justify-start text-foreground hover:text-primary hover:bg-primary/5">{t('nav.applications')}</Button>
+                  {link.href === '/Jobs' && (isPartnerUser || isAdmin) && (
+                    <Link href={isPartnerUser ? "/Partner" : "/admin/Applications"}>
+                      <Button variant="ghost" className="w-full justify-start text-foreground hover:text-primary hover:bg-primary/5">
+                        {t('nav.applications')}
+                      </Button>
                     </Link>
                   )}
                 </div>

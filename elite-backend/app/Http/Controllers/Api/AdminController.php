@@ -75,13 +75,17 @@ class AdminController extends Controller
 
         $stream = Storage::disk('private')->readStream($foreignAgency->license_file_path);
         $filename = basename($foreignAgency->license_file_path);
+        $mimeType = Storage::disk('private')->mimeType($foreignAgency->license_file_path) ?? 'application/octet-stream';
 
         return response()->streamDownload(function () use ($stream) {
             fpassthru($stream);
             if (is_resource($stream)) {
                 fclose($stream);
             }
-        }, $filename);
+        }, $filename, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . $filename . '"'
+        ]);
     }
 
     public function createStaff(Request $request)

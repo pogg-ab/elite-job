@@ -15,8 +15,8 @@ export const metadata: Metadata = {
   generator: 'Elite',
   keywords: 'admin, recruitment, employment, Elite Agency, job portal management',
   icons: {
-    icon: '/logo.jpeg',
-    apple: '/logo.jpeg',
+    icon: '/logo.PNG',
+    apple: '/logo.PNG',
   },
 
 }

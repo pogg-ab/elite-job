@@ -16,20 +16,21 @@ const Navbar: React.FC = () => {
   const { t } = useTranslation()
   const { language, setLanguage } = useLanguage()
 
+  useEffect(() => {
+    setIsAuthenticated(Boolean(getAdminToken()))
+  }, [])
+
   // hide navbar on the login page
   if (pathname && pathname.toLowerCase() === '/login') {
     return null
   }
-
-  useEffect(() => {
-    setIsAuthenticated(Boolean(getAdminToken()))
-  }, [])
 
   const links = [
     { label: 'Dashboard', href: '/Dashboard' },
     { label: 'Homepage', href: '/Homepage' },
     { label: 'About', href: '/About' },
     { label: 'Jobs', href: '/Jobs' },
+    { label: 'Applications', href: '/Applications' },
     { label: 'Services', href: '/Services' },
     { label: 'Policies', href: '/Policies' },
     { label: 'Employer Requests', href: '/EmployerRequests' },
@@ -45,16 +46,16 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between items-center h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <img src="/logo.jpeg" alt="Elite" className="w-10 h-10 object-contain rounded-md border border-white/20" />
+            <img src="/logo.PNG" alt="Elite" className="h-[52px] w-auto object-contain" />
 
-            <span className="font-bold text-xl text-white hidden sm:inline">Elite</span>
+            <span className="font-bold text-2xl text-white hidden xl:inline">Elite</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden xl:flex items-center gap-0.5">
             {links.map((link) => (
               <Link key={link.href} href={link.href}>
-                <Button variant="ghost" className="text-white hover:text-accent hover:bg-white/10">
+                <Button variant="ghost" className="text-white hover:text-accent hover:bg-white/10 px-1.5 text-[13px]">
                   {link.label}
                 </Button>
               </Link>
@@ -108,7 +109,7 @@ const Navbar: React.FC = () => {
                     }}
                     className="h-10 rounded-xl border-2 border-accent bg-accent/10 text-accent px-6 font-bold hover:bg-accent hover:text-primary transition-all duration-300 shadow-[0_0_15px_-3px_rgba(197,160,106,0.3)]"
                   >
-                    {t('nav.logout')}
+                    {t('nav.logout', { defaultValue: 'Logout' })}
                   </Button>
                 </>
               ) : (
@@ -157,7 +158,7 @@ const Navbar: React.FC = () => {
                   window.location.href = '/Login'
                 }}
               >
-                {t('nav.logout')}
+                {t('nav.logout', { defaultValue: 'Logout' })}
               </Button>
             ) : (
               <Button asChild className="block mt-2">

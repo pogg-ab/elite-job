@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\EmailOtp;
 use App\Models\ForeignAgency;
 use App\Models\JobSeekerProfile;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -38,7 +40,22 @@ class AuthController extends Controller
             'profile.preferred_country' => ['nullable', 'string', 'max:100'],
             'profile.skills' => ['nullable', 'array'],
             'profile.skills.*' => ['string', 'max:100'],
+            'otp' => ['nullable', 'string', 'size:6'],
         ]);
+
+        if (!$request->filled('otp')) {
+            $this->generateAndSendOtp($validated['email']);
+            return response()->json([
+                'message' => 'Verification code sent to your email.',
+                'status' => 'otp_required'
+            ], 200);
+        }
+
+        if (!$this->checkOtp($validated['email'], $request->otp)) {
+            return response()->json([
+                'message' => 'Invalid or expired verification code.',
+            ], 422);
+        }
 
         $user = DB::transaction(function () use ($validated) {
             $user = User::create([
@@ -160,7 +177,22 @@ class AuthController extends Controller
             'company_phone' => ['nullable', 'string', 'max:50'],
             'country' => ['nullable', 'string', 'max:100'],
             'license_file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'otp' => ['nullable', 'string', 'size:6'],
         ]);
+
+        if (!$request->filled('otp')) {
+            $this->generateAndSendOtp($validated['email']);
+            return response()->json([
+                'message' => 'Verification code sent to your email.',
+                'status' => 'otp_required'
+            ], 200);
+        }
+
+        if (!$this->checkOtp($validated['email'], $request->otp)) {
+            return response()->json([
+                'message' => 'Invalid or expired verification code.',
+            ], 422);
+        }
 
         $result = DB::transaction(function () use ($validated, $request) {
             $user = User::create([
@@ -212,5 +244,26 @@ class AuthController extends Controller
         ];
     }
 
-    
+    private function generateAndSendOtp(string $email)
+    {
+        $otp = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        $expiresAt = Carbon::now()->addMinutes(15);
+
+        EmailOtp::updateOrCreate(
+            ['email' => $email],
+            ['otp' => $otp, 'expires_at' => $expiresAt]
+        );
+
+        Mail::raw("Your verification code is: {$otp}. It expires in 15 minutes.", function ($message) use ($email) {
+            $message->to($email)->subject('Verification Code');
+        });
+    }
+
+    private function checkOtp(string $email, string $otp): bool
+    {
+        return EmailOtp::where('email', $email)
+            ->where('otp', $otp)
+            ->where('expires_at', '>', Carbon::now())
+            ->exists();
+    }
 }

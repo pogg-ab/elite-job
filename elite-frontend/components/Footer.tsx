@@ -5,7 +5,11 @@ import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { API_BASE_URL } from '@/lib/api'
 
-const Footer: React.FC = () => {
+interface FooterProps {
+  hideSeekerSection?: boolean
+}
+
+const Footer: React.FC<FooterProps> = ({ hideSeekerSection = false }) => {
   const { t } = useTranslation()
   const currentYear = new Date().getFullYear()
   const [termsPolicy, setTermsPolicy] = useState<any | null>(null)
@@ -43,14 +47,16 @@ const Footer: React.FC = () => {
           </div>
 
           {/* Quick Links */}
-          <div>
-            <h4 className="font-semibold text-[#C5A06A] mb-4">{t('footer.for_job_seekers')}</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/Jobs" className="text-white/70 hover:text-[#C5A06A] transition">{t('footer.browse_jobs')}</Link></li>
-              <li><Link href="/RegisterMultiStep" className="text-white/70 hover:text-[#C5A06A] transition">{t('footer.create_profile')}</Link></li>
-              <li><Link href="/HowItWorks" className="text-white/70 hover:text-[#C5A06A] transition">{t('footer.how_it_works')}</Link></li>
-            </ul>
-          </div>
+          {!hideSeekerSection && (
+            <div>
+              <h4 className="font-semibold text-[#C5A06A] mb-4">{t('footer.for_job_seekers')}</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/Jobs" className="text-white/70 hover:text-[#C5A06A] transition">{t('footer.browse_jobs')}</Link></li>
+                <li><Link href="/RegisterMultiStep" className="text-white/70 hover:text-[#C5A06A] transition">{t('footer.create_profile')}</Link></li>
+                <li><Link href="/HowItWorks" className="text-white/70 hover:text-[#C5A06A] transition">{t('footer.how_it_works')}</Link></li>
+              </ul>
+            </div>
+          )}
 
           {/* For Employers */}
           <div>

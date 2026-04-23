@@ -120,7 +120,9 @@ class EmployerRequestController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
         $filename = basename($item->license_path);
-        return response()->download($path, $filename);
+        return response()->file($path, [
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
     }
 
     public function updateStatus(Request $request, $id)
